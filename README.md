@@ -1,12 +1,12 @@
-# mypaper —— 中文书籍 LaTeX 模板（ctexbook + XeLaTeX + VimTeX）
+# b0 —— 中文书籍 LaTeX 模板（ctexbook + XeLaTeX + VimTeX）
 
-WSL 中的路径：`/mnt/d/work/mypaper`
+WSL 中的路径：`/mnt/d/work/mypaper/b0`
 
 ## 第一次使用
 
 ```bash
-cd /mnt/d/work/mypaper
-bash setup.sh        # 需要输入 sudo 密码；安装 TeX Live、vimtex、zathura，并安装 ~/.vimrc
+cd /mnt/d/work/mypaper/b0
+bash setup.sh        # 只需在新电脑上运行一次（本机已完成）；需要 sudo 密码
 latexmk              # 编译，生成 build/main.pdf
 ```
 
@@ -52,5 +52,11 @@ fc-cache -f
 
 ## 提示
 
-- 项目在 Windows 磁盘上（`/mnt/d`），在 WSL 中编译比放在 Linux 目录（如 `~/mypaper`）慢一些；如果嫌慢，可以把项目移到 `~` 下。
+- 项目在 Windows 磁盘上（`/mnt/d`），在 WSL 中编译比放在 Linux 目录（如 `~/b0`）慢一些；如果嫌慢，可以把项目移到 `~` 下。
 - 文件请保存为 UTF-8 编码、LF 换行。
+- `.latexmkrc` 是隐藏文件，`mv *` / `cp *` 不会带上它；缺少它时 `latexmk` 不会用 XeLaTeX，编译会失败。
+- 新建一本书时，复制整个目录（含隐藏文件），并去掉旧的编译结果和 git 记录：
+  ```bash
+  cd /mnt/d/work/mypaper
+  cp -r b0 b1 && rm -rf b1/build b1/.git
+  ```
