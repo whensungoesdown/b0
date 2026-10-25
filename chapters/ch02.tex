@@ -1,0 +1,54 @@
+\chapter{示例}
+\label{chap:example}
+
+\section{公式}
+
+行内公式 $E = mc^2$，行间公式见式~\eqref{eq:gauss}：
+\begin{equation}
+  \int_{-\infty}^{\infty} e^{-x^2} \, \mathrm{d}x = \sqrt{\pi}
+  \label{eq:gauss}
+\end{equation}
+
+\begin{definition}
+  若对任意 $\varepsilon > 0$，存在 $\delta > 0$……，则称函数 $f$ 在点 $x_0$ 处连续。
+\end{definition}
+
+\begin{theorem}
+  \label{thm:example}
+  这是一个定理。
+\end{theorem}
+
+\begin{proof}
+  这是证明。
+\end{proof}
+
+\section{表格}
+
+表~\ref{tab:example} 是一个三线表。
+
+\begin{table}[htbp]
+  \centering
+  \caption{三线表示例}
+  \label{tab:example}
+  \begin{tabular}{lcc}
+    \toprule
+    项目 & 数值 & 单位 \\
+    \midrule
+    长度 & 1.0 & m \\
+    质量 & 2.5 & kg \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{插图}
+
+把图片放在 \texttt{figures/} 目录下，用 \verb|\includegraphics{文件名}| 引用即可，例如：
+
+\begin{verbatim}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.6\textwidth]{example}
+  \caption{图片示例}
+  \label{fig:example}
+\end{figure}
+\end{verbatim}
