@@ -44,8 +44,11 @@
 
 % 带题注的代码文件：\codefile[语言]{文件}{题注}{标签}
 % 不使用浮动体，长代码可以跨页；语言默认为 c
+% \needspace：本页剩余空间放不下题注和几行代码时，先换页，免得题注单独留在页底
+\usepackage{needspace}
 \newcommand{\codefile}[4][c]{%
   \par\addvspace{\medskipamount}%
+  \needspace{6\baselineskip}%
   \begingroup
     \captionsetup{type=listing}%
     \caption{#3}\label{#4}%

@@ -1,15 +1,222 @@
-\chapter{绪论}
-\label{chap:intro}
+\chapter{从 \texorpdfstring{\NoCaseChange{Hello, world}}{Hello, world} 说起}
+\label{chap:hello}
 
-\section{研究背景}
+几乎每一本讲 C 语言的书，都从同一个程序开始：
+\codefile{code/ch01/hello.c}{最简单的 C 程序}{lst:hello}
 
-中文与 English 可以混排，ctex 会自动处理中西文之间的间距。
-引用文献的示例\cite{knuth1984}，中文文献的示例\cite{liu2013}。
+这个程序只有七行，人人都写过，好像没有什么可讲的。但它其实是一扇门：从按下回车编译它，到屏幕上出现那一行字，中间经过了预处理器、编译器、汇编器、链接器、操作系统，最后才是 CPU 一条一条地执行指令。这本书要讲的，就是这条路的最底层——CPU 是怎么造出来的。在出发之前，先把这条路从头到尾走一遍。
 
-\section{本书结构}
+本章的示例在 \texttt{code/ch01/} 目录中，在 WSL 或 Linux 终端中运行 \texttt{make}，就能一步一步地重现本章的每一个文件。书中的输出来自 x86-64 上的 Ubuntu 和 GCC 15.2；换一个版本的编译器，细节会有所不同，但大体的样子是一样的。
 
-第~\ref{chap:example}~章给出公式、图表和定理的示例。
+\section{逐行读一遍}
 
-\subsection{小节示例}
+\paragraph{\texttt{\#include <stdio.h>}}
+以 \texttt{\#} 开头的行不是 C 语句，而是给\emph{预处理器}的命令。\texttt{\#include} 的意思很朴素：把 \texttt{stdio.h} 这个文件的内容原封不动地复制到这里。尖括号表示到系统的头文件目录里去找；如果写成 \texttt{\#include "stdio.h"}，就会先在当前源文件所在的目录里找。
 
-这是一个小节。
+\texttt{stdio.h} 是“standard input/output header”的缩写，即标准输入输出头文件。我们需要它，是因为下面要调用 \texttt{printf}。
+
+\paragraph{\texttt{int main(void)}}
+\texttt{main} 是程序的入口——至少在 C 语言看来是这样。\texttt{int} 表示它返回一个整数，\texttt{void} 表示它不接受参数。程序从 \texttt{main} 的第一条语句开始执行。后面我们会看到，在 \texttt{main} 之前，其实还有别的代码在运行。
+
+\paragraph{\texttt{printf("Hello, world!\textbackslash n");}}
+调用 \texttt{printf} 函数，把一个字符串输出到屏幕上。\texttt{\textbackslash n} 是换行符。注意，\texttt{printf} 不是 C 语言的一部分，而是 C 标准库里的一个普通函数。C 语言本身没有任何输入输出的语句。
+
+\paragraph{\texttt{return 0;}}
+\texttt{main} 返回 0，告诉调用它的人：程序正常结束。在终端里运行完程序后，输入 \texttt{echo \$?}，就能看到这个 0。
+
+\section{头文件里有什么}
+\label{sec:stdio-h}
+
+\texttt{printf} 并不是在 \texttt{stdio.h} 里实现的。打开这个文件看一看，它主要是一大堆像这样的\emph{声明}：
+\begin{minted}[linenos=false]{c}
+extern int printf (const char *__restrict __format, ...);
+extern int puts (const char *__s);
+\end{minted}
+
+声明只告诉编译器一个函数长什么样：叫什么名字，接受什么参数，返回什么类型。有了声明，编译器就能检查 \texttt{printf} 的调用写得对不对，并且知道该怎样传递参数。至于 \texttt{printf} 的代码在哪里，编译器并不关心——那是链接器的事。
+
+所以，头文件和函数库是两样东西：
+\begin{itemize}
+  \item 头文件（如 \texttt{stdio.h}）是文本文件，里面是声明，在编译时用到；
+  \item 函数库（如 Linux 上的 \texttt{libc.so.6}）是编译好的机器代码，在链接和运行时用到。
+\end{itemize}
+
+那么，\texttt{stdio.h} 在哪里？GCC 会按顺序在下面几个目录里查找：
+\begin{minted}[linenos=false]{text}
+/usr/lib/gcc/x86_64-linux-gnu/15/include
+/usr/local/include
+/usr/include/x86_64-linux-gnu
+/usr/include
+\end{minted}
+最后在 \texttt{/usr/include/stdio.h} 找到它。这个列表可以用 \texttt{echo | gcc -E -Wp,-v -} 打印出来。
+
+\section{从源代码到可执行文件}
+\label{sec:toolchain}
+
+我们平时只敲一条命令：
+\begin{minted}[linenos=false]{text}
+gcc hello.c -o hello
+\end{minted}
+其实 \texttt{gcc} 只是一个“总管”，它依次调用了四个工具，每一步都生成一个中间文件（图~\ref{fig:toolchain}）。加上不同的选项，就可以让 \texttt{gcc} 在某一步停下来，看看这一步的结果。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      node distance=4mm and 9mm,
+      file/.style={draw, minimum width=19mm, minimum height=7mm, font=\ttfamily\small},
+      tool/.style={font=\small, align=center},
+      arr/.style={-{Stealth}, thick},
+    ]
+    \node[file]                 (c) {hello.c};
+    \node[file, right=of c]     (i) {hello.i};
+    \node[file, right=of i]     (s) {hello.s};
+    \node[file, right=of s]     (o) {hello.o};
+    \node[file, below=12mm of o] (x) {hello};
+    \node[file, left=of x, dashed] (lib) {libc 等};
+
+    \draw[arr] (c) -- node[tool, above=1mm] {预处理\\\texttt{-E}} (i);
+    \draw[arr] (i) -- node[tool, above=1mm] {编译\\\texttt{-S}} (s);
+    \draw[arr] (s) -- node[tool, above=1mm] {汇编\\\texttt{-c}} (o);
+    \draw[arr] (o) -- node[tool, right=1mm] {链接} (x);
+    \draw[arr, dashed] (lib) -- (x);
+  \end{tikzpicture}
+  \caption{gcc 的四个步骤}
+  \label{fig:toolchain}
+\end{figure}
+
+下面是本章 Makefile 中的四条命令，它们一步一步地完成同样的工作：
+\begin{minted}[linenos=false]{text}
+gcc -E hello.c -o hello.i      # 1. 预处理
+gcc -S hello.i -o hello.s      # 2. 编译
+gcc -c hello.s -o hello.o      # 3. 汇编
+gcc hello.o -o hello           # 4. 链接
+\end{minted}
+
+表~\ref{tab:hello-files} 列出了每一步生成的文件。一个 84 字节的源文件，预处理之后变成了两万多字节——这些都是 \texttt{stdio.h} 和它又包含的其他头文件带进来的。
+
+\begin{table}[htbp]
+  \centering
+  \caption{各步骤生成的文件}
+  \label{tab:hello-files}
+  \begin{tabular}{llrl}
+    \toprule
+    文件 & 内容 & 大小（字节） & 由谁生成 \\
+    \midrule
+    \texttt{hello.c} & C 源代码       & 84     & 程序员 \\
+    \texttt{hello.i} & 预处理后的 C 代码 & 21\,439 & 预处理器 \texttt{cpp} \\
+    \texttt{hello.s} & 汇编代码       & 661    & 编译器 \texttt{cc1} \\
+    \texttt{hello.o} & 目标文件（机器码） & 1\,496  & 汇编器 \texttt{as} \\
+    \texttt{hello}   & 可执行文件     & 15\,952 & 链接器 \texttt{ld} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{第一步：预处理}
+
+预处理器处理所有以 \texttt{\#} 开头的行：把 \texttt{\#include} 的文件展开，把宏替换掉，去掉注释。它的输出仍然是 C 代码，只是不再有 \texttt{\#include}。
+
+打开 \texttt{hello.i}，它有八百多行。前面几乎全是从头文件里复制来的类型定义和函数声明，\texttt{printf} 和 \texttt{puts} 的声明也在其中；一共有十几个头文件被带了进来，因为 \texttt{stdio.h} 自己又包含了别的头文件。我们自己写的代码，被挤到了文件的最末尾：
+\codefile{code/ch01/hello_tail.i}{hello.i 的最后几行}{lst:hello-i}
+
+第一行 \texttt{\# 3 "hello.c"} 是预处理器留给编译器的记号，意思是“下面的代码来自 \texttt{hello.c} 的第 3 行”。编译器报错时，靠它找回原来的行号。
+
+\subsection{第二步：编译}
+
+编译器 \texttt{cc1} 把 C 代码翻译成汇编代码。这是整个过程中最复杂的一步：词法分析、语法分析、类型检查、优化、生成代码，都在这一步完成。\texttt{hello.s} 的主要部分见代码~\ref{lst:hello-s}（为了便于阅读，这里去掉了以 \texttt{.cfi} 开头的调试信息和文件末尾的几行附加信息）。
+
+\codefile[gas]{code/ch01/hello_main.s}{hello.s 的主要部分（x86-64）}{lst:hello-s}
+
+以点开头的行，如 \texttt{.section}、\texttt{.globl}，是给汇编器的指示，不是指令。第 2--4 行把字符串放进只读数据段（\texttt{.rodata}），并给它起名为 \texttt{.LC0}；第 5 行回到代码段（\texttt{.text}）；第 6 行声明 \texttt{main} 是一个全局符号，链接器才能找到它。从第 8 行的 \texttt{main:} 开始才是真正的指令。即使还不会 x86 汇编，也能大致看懂：
+\begin{itemize}
+  \item \texttt{endbr64} 是给 CPU 的一个安全标记，用来防止某些攻击，可以先不管它。
+  \item \texttt{pushq \%rbp} 和 \texttt{movq \%rsp, \%rbp} 建立 \texttt{main} 函数的栈帧，最后的 \texttt{popq \%rbp} 把它拆掉。
+  \item \texttt{leaq .LC0(\%rip), \%rax} 取得字符串的地址，再放进寄存器 \texttt{rdi}。在 x86-64 Linux 上，函数的第一个参数就通过 \texttt{rdi} 传递。
+  \item \texttt{call puts@PLT} 调用函数。
+  \item \texttt{movl \$0, \%eax} 把返回值 0 放进 \texttt{eax}——这就是 \texttt{return 0}。
+  \item \texttt{ret} 返回。
+\end{itemize}
+
+等一等，调用的为什么是 \texttt{puts}，而不是 \texttt{printf}？
+
+\subsection{编译器做的一个小优化}
+
+\texttt{printf} 是一个复杂的函数：它要逐个字符地扫描格式字符串，遇到 \texttt{\%d}、\texttt{\%s} 这样的格式说明就做相应的转换。而我们的字符串里没有任何格式说明，而且以 \texttt{\textbackslash n} 结尾。GCC 知道，在这种情况下，\texttt{printf("Hello, world!\textbackslash n")} 和 \texttt{puts("Hello, world!")} 的效果完全相同——\texttt{puts} 会自己在末尾加一个换行符。于是它悄悄地换成了更简单、更快的 \texttt{puts}。注意代码~\ref{lst:hello-s} 引用的字符串 \texttt{.LC0} 是 \texttt{"Hello, world!"}，末尾的 \texttt{\textbackslash n} 已经被去掉了。
+
+这件事告诉我们两点。第一，编译器比我们想象的更了解标准库：\texttt{printf}、\texttt{memcpy}、\texttt{strlen} 这些函数，在 GCC 里有专门的“内建”（built-in）版本，编译器知道它们的含义，会对它们做优化。第二，即使没有打开优化选项，编译器生成的代码也不一定是源代码的逐字翻译。
+
+如果加上选项 \texttt{-fno-builtin}，告诉 GCC 不要把这些函数当作内建函数，生成的代码里就会老老实实地调用 \texttt{printf}。
+
+\subsection{第三步：汇编}
+
+汇编器 \texttt{as} 把汇编代码翻译成机器码，生成\emph{目标文件} \texttt{hello.o}。机器码就是 CPU 真正执行的东西：一串字节。用 \texttt{objdump -d -r hello.o} 可以把它反汇编出来（代码~\ref{lst:hello-o}）。
+
+\codefile[text]{code/ch01/hello_main.objdump}{hello.o 中 main 函数的机器码}{lst:hello-o}
+
+每一行左边是这条指令在 \texttt{main} 函数中的偏移，中间是它的机器码，右边是对应的汇编指令。可以看到，x86 的指令长短不一：\texttt{push \%rbp} 只有一个字节 \texttt{55}，\texttt{lea} 有七个字节。CPU 要先弄清楚一条指令有多长，才知道下一条指令从哪里开始——这正是 x86 的 CPU 难做的原因之一，后面讲指令编码时我们还会回到这里。
+
+再看偏移 \texttt{12} 处的 \texttt{call} 指令：机器码是 \texttt{e8 00 00 00 00}。\texttt{e8} 表示“调用”，后面四个字节本应是被调用函数的相对地址，现在却全是 0。下面一行的 \texttt{R\_X86\_64\_PLT32 puts-0x4} 是一条\emph{重定位}记录，意思是：“这里要填 \texttt{puts} 的地址，但我现在还不知道它在哪里。”同样，偏移 \texttt{8} 处的 \texttt{lea} 指令也留了四个字节的空，等着填字符串的地址。
+
+\texttt{hello.o} 是一个“半成品”：自己的代码已经翻译成了机器码，但对外部的引用还空着。用 \texttt{nm hello.o} 可以看到，\texttt{main} 标记为 \texttt{T}（定义在代码段中），\texttt{puts} 标记为 \texttt{U}（undefined，未定义）。
+
+\subsection{第四步：链接}
+
+链接器 \texttt{ld} 把目标文件和函数库拼在一起，填上所有空着的地址，生成可执行文件。
+
+\texttt{puts} 的代码在 C 标准库 \texttt{libc.so.6} 中。这是一个\emph{动态链接库}：链接时，链接器并不把 \texttt{puts} 的代码复制进 \texttt{hello}，只是记下“这个程序需要 \texttt{libc.so.6}”；等到程序运行时，再由动态链接器 \texttt{ld-linux-x86-64.so.2} 把库加载进内存，填上真正的地址。\texttt{call puts@PLT} 中的 PLT（Procedure Linkage Table，过程链接表）就是为这件事准备的一个中转站。用 \texttt{ldd hello} 可以看到程序依赖的库：
+\begin{minted}[linenos=false]{text}
+linux-vdso.so.1
+libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6
+/lib64/ld-linux-x86-64.so.2
+\end{minted}
+
+链接时，\texttt{gcc} 还悄悄地加进了几个我们没写的目标文件：\texttt{Scrt1.o}、\texttt{crti.o}、\texttt{crtbeginS.o}、\texttt{crtendS.o}、\texttt{crtn.o}。加上选项 \texttt{-v} 运行 \texttt{gcc}，就能在链接命令里看到它们。其中 \texttt{Scrt1.o} 里有一个名叫 \texttt{\_start} 的函数，它才是程序真正的入口。
+
+\section{程序运行起来之后}
+\label{sec:runtime}
+
+在终端里输入 \texttt{./hello}，按下回车，屏幕上出现了 \texttt{Hello, world!}。这中间发生了这些事：
+\begin{enumerate}
+  \item 终端程序（shell）请求操作系统运行 \texttt{hello}。操作系统读取这个文件，为它建立一个新的进程，把代码和数据映射到内存中。
+  \item 因为程序需要动态链接库，操作系统先把控制权交给动态链接器。动态链接器加载 \texttt{libc.so.6}，填好 \texttt{puts} 等函数的地址。
+  \item 程序从 \texttt{\_start} 开始执行。它做一些准备工作，比如整理命令行参数，然后通过 C 标准库调用 \texttt{main}。
+  \item \texttt{main} 调用 \texttt{puts}。\texttt{puts} 把字符串放进标准输出的缓冲区，最终调用 \texttt{write} 系统调用，请操作系统把这些字节写到终端上。
+  \item \texttt{main} 返回 0。C 标准库接着调用 \texttt{exit(0)}，把缓冲区里剩下的内容写出去，然后通过 \texttt{exit\_group} 系统调用通知操作系统：这个进程结束了，退出状态是 0。
+\end{enumerate}
+
+到这里，我们终于看到了软件的底：程序自己并不能在屏幕上写字，它只能请操作系统帮忙；操作系统也只是一个程序，它的每一条指令，最后都要由 CPU 来执行。
+
+\section{CPU 看到的是什么}
+
+把前面这些层层剥开，CPU 看到的只有一样东西：内存里的一串字节。代码~\ref{lst:hello-o} 中的 \texttt{55}、\texttt{48 89 e5}、\texttt{c3}……就是 CPU 真正要处理的东西。
+
+CPU 的工作是一个永不停歇的循环：
+\begin{enumerate}
+  \item 取指：按照程序计数器（x86-64 中叫 \texttt{rip}）给出的地址，从内存中读出指令的字节；
+  \item 译码：弄清楚这几个字节是什么指令，要用到哪些寄存器；
+  \item 执行：做运算，或者访问内存；
+  \item 写回：把结果写回寄存器或内存，把程序计数器指向下一条指令。
+\end{enumerate}
+
+C 语言里的函数、变量、类型，到这里都已经不存在了，只剩下寄存器、内存地址和一条一条的指令。\texttt{main} 是一个地址，\texttt{"Hello, world!"} 是内存里的十四个字节（最后一个是 0），\texttt{return 0} 是把寄存器 \texttt{eax} 设为 0。
+
+从下一部分开始，我们就要亲手造一个能做这件事的 CPU：它会取指、译码、执行，能运行我们用 C 写的程序。为了让它简单一些，我们不会去做 x86 那样指令长短不一的 CPU，而是选择一个更规整的指令集。
+
+\section{小结}
+
+\begin{itemize}
+  \item \texttt{\#include <stdio.h>} 把头文件的内容复制进来。头文件里只有声明；函数的代码在函数库里。
+  \item \texttt{gcc} 依次调用预处理器、编译器、汇编器和链接器，分别生成 \texttt{.i}、\texttt{.s}、\texttt{.o} 文件和可执行文件。
+  \item 编译器会根据它对标准库的了解做优化，例如把 \texttt{printf} 换成 \texttt{puts}。
+  \item 目标文件中对外部函数的调用还是空着的，由链接器和动态链接器填上真正的地址。
+  \item 程序的真正入口是 \texttt{\_start}，不是 \texttt{main}；输出最终通过系统调用由操作系统完成。
+  \item CPU 只看到内存中的指令字节，它不断地取指、译码、执行、写回。
+\end{itemize}
+
+\section*{练习}
+
+\begin{enumerate}
+  \item 在 \texttt{code/ch01/} 目录中运行 \texttt{make}，然后打开 \texttt{hello.i}，找到 \texttt{printf} 和 \texttt{puts} 的声明。
+  \item 把 \texttt{hello.c} 中的字符串改成 \texttt{"Hello, \%s!\textbackslash n"}，并加上一个参数 \texttt{"world"}。重新生成 \texttt{hello.s}，看看这一次调用的是 \texttt{printf} 还是 \texttt{puts}，想一想为什么。
+  \item 去掉 \texttt{\#include <stdio.h>} 这一行，重新编译。GCC 会给出什么错误或警告？
+  \item 在 \texttt{hello.o} 和 \texttt{hello} 上分别运行 \texttt{objdump -d}，比较 \texttt{main} 函数中 \texttt{call} 指令的机器码有什么不同。
+\end{enumerate}
