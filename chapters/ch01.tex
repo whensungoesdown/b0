@@ -201,6 +201,79 @@ C 语言里的函数、变量、类型，到这里都已经不存在了，只剩
 
 从下一部分开始，我们就要亲手造一个能做这件事的 CPU：它会取指、译码、执行，能运行我们用 C 写的程序。为了让它简单一些，我们不会去做 x86 那样指令长短不一的 CPU，而是选择一个更规整的指令集。
 
+\section{先别急着合上书}
+\label{sec:dont-quit}
+
+好了，读到这里，你多半已经晕了：预处理、目标文件、重定位、PLT、动态链接、系统调用……再加上一屏又一屏的汇编代码和机器码。是不是已经想把这本书合上，扔到一边了？
+
+{\Large\bfseries But——}
+
+\begin{center}
+  \begin{tikzpicture}[scale=1.1, line width=1.2pt]
+    % 两瓣屁股：圆心在 (-0.72,0) 和 (0.72,0)、半径为 1 的两个圆的外轮廓，
+    % 两圆交于 (0,±0.694)
+    \filldraw[fill=pink!70]
+      (0,0.694) arc[start angle=43.95, end angle=316.05, radius=1]
+                arc[start angle=223.95, end angle=496.05, radius=1];
+    % 中间那道缝
+    \draw (0,0.694) .. controls (0.07,0.3) .. (0.02,-0.25);
+    % 高光
+    \draw[white, line width=2.2pt, line cap=round]
+      (-1.3,0.42) arc[start angle=150, end angle=115, radius=0.7];
+    \draw[white, line width=2.2pt, line cap=round]
+      (0.22,0.58) arc[start angle=150, end angle=115, radius=0.7];
+    % 腮红
+    \fill[red!40, opacity=0.5] (-0.95,-0.35) ellipse[x radius=0.22, y radius=0.12];
+    \fill[red!40, opacity=0.5] ( 0.95,-0.35) ellipse[x radius=0.22, y radius=0.12];
+    % 扭一扭
+    \foreach \s in {-1, 1} {
+      \draw[gray, line width=0.8pt, line cap=round]
+        (\s*1.95, 0.35) arc[start angle=90-\s*90+\s*30, end angle=90-\s*90-\s*30, radius=0.4];
+      \draw[gray, line width=0.8pt, line cap=round]
+        (\s*2.2, 0.5) arc[start angle=90-\s*90+\s*35, end angle=90-\s*90-\s*35, radius=0.65];
+    }
+  \end{tikzpicture}
+
+  \smallskip
+  （不，不是这个 butt。）
+\end{center}
+
+听我把话说完！
+
+\begin{center}
+  {\Large\bfseries 上面讲的这些，你现在一个都不需要懂。}
+\end{center}
+
+真的。它们是这本书接下来要一层一层慢慢剥开的东西，这一章只是让你站在门口，远远地看一眼门里面有多深。看不懂，太正常了；要是现在就全看懂了，后面的书也就不用写了。
+
+现在你只需要做一件事：把代码~\ref{lst:hello} 当成一个模板。开头的 \texttt{\#include <stdio.h>} 和 \texttt{int main(void)}、\texttt{\{}，结尾的 \texttt{return 0;} 和 \texttt{\}}，原样照抄，一个字都不用改。中间想打印什么，就写一行 \texttt{printf}，想打印几行，就写几行：
+
+\codefile{code/ch01/hey.c}{想打印什么就打印什么}{lst:hey}
+
+只有三条规矩：
+\begin{itemize}
+  \item 要打印的内容，放在一对双引号里；
+  \item \texttt{\textbackslash n} 表示换行，想换行的地方就加上它；
+  \item 每一行 \texttt{printf(...)} 的末尾，别忘了分号 \texttt{;}。
+\end{itemize}
+
+保存为 \texttt{hey.c}，然后编译、运行：
+\begin{minted}[linenos=false]{text}
+gcc hey.c -o hey
+./hey
+\end{minted}
+\needspace{14\baselineskip}
+屏幕上就会出现：
+\inputminted[linenos=false]{text}{code/ch01/hey.out}
+
+三角形想打印多大就打印多大，用 \texttt{*} 也行，用 \texttt{@} 也行，换成别的字符也没问题。想让老爸看看你的作品，就把 \texttt{Hey Dad!} 换成你想对他说的话——在 WSL 或 Linux 的终端里，中文也可以直接打印。打错了也不要紧，\texttt{gcc} 会告诉你错在第几行，改好了再编译一次就是了。
+
+\bigskip
+\begin{center}
+  {\Large\bfseries 恭喜你，你已经在写 C 程序了！}
+\end{center}
+\bigskip
+
 \section{小结}
 
 \begin{itemize}
@@ -210,11 +283,13 @@ C 语言里的函数、变量、类型，到这里都已经不存在了，只剩
   \item 目标文件中对外部函数的调用还是空着的，由链接器和动态链接器填上真正的地址。
   \item 程序的真正入口是 \texttt{\_start}，不是 \texttt{main}；输出最终通过系统调用由操作系统完成。
   \item CPU 只看到内存中的指令字节，它不断地取指、译码、执行、写回。
+  \item 以上这些现在都不用懂。把 Hello, world 当成模板，在中间写 \texttt{printf}，就已经是在写 C 程序了。
 \end{itemize}
 
 \section*{练习}
 
 \begin{enumerate}
+  \item 照着代码~\ref{lst:hey}，用 \texttt{printf} 打印一个你自己设计的图案：一棵圣诞树、一个箭头，或者你名字的首字母。
   \item 在 \texttt{code/ch01/} 目录中运行 \texttt{make}，然后打开 \texttt{hello.i}，找到 \texttt{printf} 和 \texttt{puts} 的声明。
   \item 把 \texttt{hello.c} 中的字符串改成 \texttt{"Hello, \%s!\textbackslash n"}，并加上一个参数 \texttt{"world"}。重新生成 \texttt{hello.s}，看看这一次调用的是 \texttt{printf} 还是 \texttt{puts}，想一想为什么。
   \item 去掉 \texttt{\#include <stdio.h>} 这一行，重新编译。GCC 会给出什么错误或警告？
