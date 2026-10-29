@@ -21,8 +21,20 @@ endif
 let g:tex_flavor = 'latex'
 let g:vimtex_compiler_method = 'latexmk'
 let g:vimtex_compiler_latexmk_engines = {'_': '-xelatex'}
+" 辅助文件目录，规则与项目中 .latexmkrc 的一致：项目在 Windows 磁盘上（/mnt/c、/mnt/d……）时，
+" 辅助文件放在 ~/.cache/latexmk-aux/ 下，vimtex 要到那里找 .log（错误列表）和 .aux（标签补全）
+function! s:latexmk_aux_dir(file_info) abort
+  let l:root = a:file_info.root
+  if l:root !~# '^/mnt/\a/'
+    return ''
+  endif
+  let l:key = substitute(substitute(l:root, '^/mnt/', '', ''), '/', '_', 'g')
+  return expand('~/.cache/latexmk-aux/') . l:key
+endfunction
+
 let g:vimtex_compiler_latexmk = {
       \ 'out_dir'    : 'build',
+      \ 'aux_dir'    : function('s:latexmk_aux_dir'),
       \ 'continuous' : 1,
       \ 'options'    : [
       \   '-verbose',
@@ -41,4 +53,6 @@ let g:vimtex_quickfix_mode = 2
 let g:vimtex_quickfix_ignore_filters = [
       \ 'Underfull',
       \ 'Overfull',
+      \ 'Font shape',
+      \ 'Some font shapes were not available',
       \]

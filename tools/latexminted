@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+# minted 的辅助程序 latexminted 的包装脚本（由 .latexmkrc 放到 PATH 最前面）。
+#
+# Ubuntu 自带的 latexminted 0.6.0 在 Python 3.14 下会崩溃：
+#   TypeError: ArgParser.__init__() got an unexpected keyword argument 'color'
+# 原因是 Python 3.14 的 argparse 给子命令解析器多传了一个 color 参数。
+# 这里把这个参数去掉，然后运行系统中真正的 latexminted。
+# 以后 Ubuntu 修复了这个问题，可以删除本文件和 .latexmkrc 中修改 PATH 的那一行。
+import argparse
+import runpy
+import sys
+
+REAL = '/usr/bin/latexminted'
+
+_orig_add_parser = argparse._SubParsersAction.add_parser
+
+
+def _add_parser(self, *args, **kwargs):
+    parser_class = self._parser_class
+
+    def _parser_class(*a, **kw):
+        kw.pop('color', None)
+        return parser_class(*a, **kw)
+
+    self._parser_class = _parser_class
+    try:
+        return _orig_add_parser(self, *args, **kwargs)
+    finally:
+        self._parser_class = parser_class
+
+
+argparse._SubParsersAction.add_parser = _add_parser
+sys.argv[0] = REAL
+runpy.run_path(REAL, run_name='__main__')

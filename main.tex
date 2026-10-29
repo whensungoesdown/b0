@@ -12,13 +12,48 @@
 % ---------- 页面 ----------
 \usepackage[top=2.5cm, bottom=2.5cm, inner=3cm, outer=2.5cm]{geometry}
 \linespread{1.3}
+\setlength{\emergencystretch}{3em}   % 行内有较长的代码词时，允许适当拉伸，避免文字伸出版心
 
 % ---------- 数学、图表 ----------
 \usepackage{amsmath, amssymb, amsthm}
 \usepackage{graphicx}
 \graphicspath{{figures/}}
 \usepackage{booktabs}
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}   % 左对齐的定宽列
 \usepackage{xcolor}
+\usepackage[labelsep=quad]{caption}   % 题注写作“图 3.1　标题”
+\usepackage{tikz}
+\usetikzlibrary{positioning, calc, arrows.meta}
+
+% ---------- 代码 ----------
+% minted 用 Pygments 高亮，通过 latexminted 调用（见 .latexmkrc 和 tools/latexminted）
+\usepackage[newfloat]{minted}
+\setminted{
+  fontsize=\small,
+  linenos,
+  numbersep=6pt,
+  frame=single,
+  rulecolor=gray!50,
+  bgcolor=gray!5,
+  style=default,
+  tabsize=4,
+  breaklines,
+}
+\SetupFloatingEnvironment{listing}{name=代码, listname=代码清单, within=chapter}
+
+% 带题注的代码文件：\codefile[语言]{文件}{题注}{标签}
+% 不使用浮动体，长代码可以跨页；语言默认为 c
+\newcommand{\codefile}[4][c]{%
+  \par\addvspace{\medskipamount}%
+  \begingroup
+    \captionsetup{type=listing}%
+    \caption{#3}\label{#4}%
+  \endgroup
+  \nopagebreak[4]%
+  \inputminted{#1}{#2}%
+  \par\addvspace{\medskipamount}%
+}
 
 % 定理环境，按章编号
 \newtheorem{theorem}{定理}[chapter]
@@ -44,10 +79,12 @@
 \maketitle
 \include{frontmatter/preface}
 \tableofcontents
+\listoflistings
 
 \mainmatter
 \include{chapters/ch01}
 \include{chapters/ch02}
+\include{chapters/ch03}
 
 \appendix
 \include{backmatter/appendix}

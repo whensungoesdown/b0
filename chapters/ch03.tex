@@ -1,0 +1,287 @@
+\chapter{C 程序的结构}
+\label{chap:c-structure}
+
+设计 CPU 的过程中，C 语言几乎无处不在：启动代码之后的初始化程序、外设驱动、操作系统内核、验证用的测试程序，都是用 C 写的。本章不讲 C 的语法，而是讨论一个更实际的问题：一个函数应该组织成什么样子。
+
+C 语言没有异常，也没有析构函数。一个函数往往要依次执行好几个可能失败的操作——打开文件、分配内存、申请硬件资源——每一步都要检查返回值；一旦失败，还要把前面已经拿到的资源一一释放。这部分代码常常比完成功能的代码还多。如果没有固定的写法，函数很快就会变得难以阅读，资源泄漏、重复释放这类错误也会随之出现。
+
+经过多年的实践，大型 C 代码库形成了几种固定的写法。Windows 内核代码常把函数主体包在一个只执行一次的 \texttt{do \{ \} while (FALSE)} 循环里，出错时用 \texttt{break} 跳出；Linux 内核则用 \texttt{goto} 跳到函数末尾的清理代码。写法不同，思想相同：
+\begin{itemize}
+  \item \textbf{成功路径自上而下}：如果每一步都成功，代码从函数顶部一直执行到底部，中间没有层层嵌套。读者从上往下读一遍，就知道这个函数做了什么。
+  \item \textbf{失败路径统一出口}：任何一步失败，都立即离开主流程，到函数末尾的同一段清理代码，由它释放资源并返回错误码。
+\end{itemize}
+
+本章先用一个具体的例子说明没有这种结构时会出现什么问题，然后依次介绍只执行一次的循环、\texttt{goto} 和提前返回三种写法，最后总结配套的编程习惯。
+
+本章的示例代码都在 \texttt{code/ch03/} 目录中。除 Windows 驱动的例子外，其余代码都可以在 Linux 上用 \texttt{make test} 编译和测试。
+
+\section{一个例子：把文件读入内存}
+\label{sec:load-file}
+
+本章的各种写法都实现同一个函数：把一个文件的全部内容读入一块新分配的内存。
+\begin{minted}[linenos=false]{c}
+int load_file(const char *path, char **out, size_t *out_len);
+\end{minted}
+约定如下：
+\begin{itemize}
+  \item 成功时返回 0，\texttt{*out} 指向以 \texttt{'\textbackslash 0'} 结尾的缓冲区，\texttt{*out\_len} 是文件长度。缓冲区由调用者用 \texttt{free} 释放。
+  \item 失败时返回负的错误码，例如文件不存在时返回 \texttt{-ENOENT}，这是 Linux 内核的习惯。此时 \texttt{*out} 为 \texttt{NULL}。
+\end{itemize}
+
+完成这个任务需要五步，每一步都可能失败，涉及两个资源：文件和缓冲区（表~\ref{tab:load-steps}）。越往后出错，需要释放的资源越多，这正是错误处理难写的原因。
+
+\begin{table}[htbp]
+  \centering
+  \caption{读入文件的五个步骤}
+  \label{tab:load-steps}
+  \begin{tabular}{clll}
+    \toprule
+    步骤 & 操作 & 函数 & 失败时需要释放 \\
+    \midrule
+    1 & 打开文件     & \texttt{fopen}  & 无 \\
+    2 & 移到文件末尾 & \texttt{fseek}  & 文件 \\
+    3 & 取得文件长度 & \texttt{ftell}  & 文件 \\
+    4 & 分配缓冲区   & \texttt{malloc} & 文件 \\
+    5 & 读取内容     & \texttt{fread}  & 缓冲区、文件 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{两种常见的坏写法}
+
+\subsection{层层嵌套}
+
+最直接的写法是“成功了才往下做”：每一步成功，就在 \texttt{if} 里面做下一步（代码~\ref{lst:nested}）。
+
+\codefile{code/ch03/nested.c}{层层嵌套的写法}{lst:nested}
+
+这段代码是正确的，但有三个问题：
+\begin{enumerate}
+  \item 成功路径——也就是这个函数真正要做的事——被推到了第六层缩进。步骤越多，代码越往右偏，整体形状像一个箭头，所以这种代码有时被称为“箭头代码”（arrow code）。
+  \item 每个 \texttt{else} 都离对应的 \texttt{if} 很远。看到 \texttt{err = -errno;} 时，要往上数括号，才能知道它处理的是哪一步的失败。
+  \item 增加一个步骤，就要再加一层嵌套，并把后面的代码整体右移。
+\end{enumerate}
+
+\subsection{每个出错点各自清理}
+
+另一种写法是出错就立即返回，在返回之前把已经拿到的资源释放掉（代码~\ref{lst:dup}）。
+
+\codefile{code/ch03/dup_cleanup.c}{每个出错点各自清理的写法}{lst:dup}
+
+嵌套没有了，成功路径也回到了左边，但清理代码被复制了多次：\texttt{fclose(fp)} 出现了五次。以后如果再增加一个资源，比如一把锁，就要找出所有的 \texttt{return}，逐一补上释放代码，漏掉一处就是一个资源泄漏。
+
+重复的代码里还容易藏着细节错误。注意 \texttt{fseek} 失败的分支：必须先把 \texttt{errno} 保存到 \texttt{err}，再调用 \texttt{fclose}，因为 \texttt{fclose} 可能改写 \texttt{errno}。如果写成 \texttt{fclose(fp); return -errno;}，返回的就可能是错误的错误码。这种细节要在每一个出错点都写对，很难保证。
+
+\section{原则：成功路径自上而下}
+\label{sec:happy-path}
+
+好的结构如图~\ref{fig:happy-path} 所示：成功路径是左边一条直线，从上走到下；每一步失败时都向右离开，汇合到底部同一段清理代码。成功路径最后也经过这段清理代码。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      node distance=5mm,
+      box/.style={draw, rounded corners, minimum width=34mm, minimum height=7mm},
+      ok/.style={-{Stealth}, thick},
+      fail/.style={red!70!black, dashed},
+    ]
+    \node[box]               (s1) {1. 打开文件};
+    \node[box, below=of s1]  (s2) {2. 移到文件末尾};
+    \node[box, below=of s2]  (s3) {3. 取得文件长度};
+    \node[box, below=of s3]  (s4) {4. 分配缓冲区};
+    \node[box, below=of s4]  (s5) {5. 读取内容};
+    \node[box, below=of s5]  (s6) {交出缓冲区};
+    \node[box, below=8mm of s6, fill=gray!10] (c) {清理资源，返回状态};
+
+    \foreach \a/\b in {s1/s2, s2/s3, s3/s4, s4/s5, s5/s6, s6/c}
+      \draw[ok] (\a) -- (\b);
+
+    \coordinate (rail) at ($(s1.east) + (16mm, 0)$);
+    \foreach \s in {s1, s2, s3, s4, s5}
+      \draw[fail] (\s.east) -- (\s.east -| rail);
+    \draw[fail, -{Stealth}] (s1.east -| rail) -- (c.east -| rail) -- (c.east);
+
+    \node[right=1mm of rail |- s3, red!70!black, align=left]
+      {失败\\（\texttt{break} 或 \texttt{goto}）};
+    \node[left=6mm of s3, align=center] {成功路径\\自上而下};
+  \end{tikzpicture}
+  \caption{成功路径与统一出口}
+  \label{fig:happy-path}
+\end{figure}
+
+具体来说，有四条规则：
+\begin{enumerate}
+  \item \textbf{开头初始化。}函数开头把所有资源变量设为“空”值（指针为 \texttt{NULL}，文件描述符为 $-1$），把状态变量设为一个表示失败的值。这样，清理代码只要看变量是否为空，就知道这个资源有没有拿到。
+  \item \textbf{调用、检查、离开。}每一步都写成“调用 → 检查返回值 → 失败就离开”。成功时不缩进，直接往下走。
+  \item \textbf{统一出口。}所有失败都到函数末尾的同一段清理代码。资源按与获取相反的顺序释放。
+  \item \textbf{一个 \texttt{return}。}函数只在末尾返回一次，返回的就是状态变量。
+\end{enumerate}
+
+“离开”有两种方式：在只执行一次的循环里 \texttt{break}，或者 \texttt{goto} 到函数末尾的标签。下面两节分别介绍。
+
+\section{模式一：只执行一次的循环}
+\label{sec:do-while}
+
+\subsection{原理}
+
+\begin{minted}[linenos=false]{c}
+do {
+    /* 函数主体：任何一步失败就 break */
+} while (FALSE);
+/* 清理代码 */
+\end{minted}
+
+条件 \texttt{FALSE} 为假，所以循环体只执行一次，和一个普通的代码块没有区别。但它毕竟是循环，可以在里面使用 \texttt{break}：\texttt{break} 会立即跳到循环后面的第一条语句。于是，\texttt{do \{ \} while (FALSE)} 就成了一个“可以随时跳出的代码块”：主体放在循环里，清理代码放在循环后面，任何一步失败就 \texttt{break}。
+
+\texttt{FALSE} 是 Windows 头文件中定义的宏，值为 0。在其他环境中，同样的写法是 \texttt{do \{ \} while (0)}。
+
+\begin{quote}
+  \textbf{注意：}一定要写成 \texttt{do \{ \} while (FALSE);}。如果写成 \texttt{while (FALSE) \{ \}}，条件在进入循环之前就判断为假，循环体一次也不会执行。
+\end{quote}
+
+\subsection{Windows 内核中的例子}
+
+代码~\ref{lst:nt} 在 Windows 内核驱动中实现同样的功能。驱动程序中通常调用 \texttt{ZwCreateFile} 等 \texttt{Zw} 系列函数，它们与用户态的 \texttt{NtCreateFile} 等函数参数相同。这段代码需要 Windows 驱动开发包（WDK）才能编译。
+
+\codefile{code/ch03/nt_read.c}{Windows 内核中的 do-while(FALSE) 写法}{lst:nt}
+
+这段代码有几个要点：
+\begin{itemize}
+  \item \texttt{status} 一开始设为 \texttt{STATUS\_UNSUCCESSFUL}，\texttt{file} 和 \texttt{data} 初始化为 \texttt{NULL}。
+  \item 每次调用系统函数后，用 \texttt{NT\_SUCCESS(status)} 检查。失败就 \texttt{break}，这时 \texttt{status} 里已经是系统函数返回的错误码。
+  \item 不是系统函数返回的错误，例如文件为空、文件太大、内存分配失败，要在 \texttt{break} 之前自己给 \texttt{status} 赋值。这一点最容易忘记：如果漏写，\texttt{status} 里还是上一步成功时的 \texttt{STATUS\_SUCCESS}，函数就会在什么也没做成的情况下报告成功。
+  \item 全部成功后，把 \texttt{data} 交给调用者，并把 \texttt{data} 置为 \texttt{NULL}，后面的清理代码就不会释放它。“交出所有权后置空”这个技巧，让成功和失败可以共用同一段清理代码。
+  \item 循环结束后先检查 \texttt{status}，失败时输出调试信息；然后按与获取相反的顺序释放资源，最后返回 \texttt{status}。
+\end{itemize}
+
+\subsection{需要注意的地方}
+
+\begin{itemize}
+  \item \texttt{break} 只跳出最内层的循环或 \texttt{switch}。如果主体里还有 \texttt{for} 循环或 \texttt{switch}，其中的 \texttt{break} 不会跳到清理代码。这时要先设置状态，跳出内层之后再 \texttt{break} 一次。
+  \item 不要在 \texttt{do \{ \} while (FALSE)} 里使用 \texttt{continue}。\texttt{continue} 会跳到循环条件处，条件为假，于是循环结束。效果和 \texttt{break} 一样，但读者很难看出这一点。
+  \item 不要嵌套多层 \texttt{do \{ \} while (FALSE)}，否则很难看出每个 \texttt{break} 跳到哪里。
+  \item 有的编译器在较高的警告级别下，会对 \texttt{while (FALSE)} 给出“条件表达式是常量”的警告。
+\end{itemize}
+
+在 Windows 上，微软的结构化异常处理（SEH）也能写出同样的结构：主体放在 \texttt{\_\_try} 块中，用 \texttt{\_\_leave} 跳出，清理代码放在 \texttt{\_\_finally} 块中。思路与 \texttt{do \{ \} while (FALSE)} 相同。
+
+\section{模式二：\texorpdfstring{\NoCaseChange{goto}}{goto} 统一出口}
+\label{sec:goto}
+
+1968 年，Dijkstra 发表了著名的短文《Go To Statement Considered Harmful》\cite{dijkstra1968}，此后 \texttt{goto} 在很多教材里成了禁忌。Dijkstra 反对的是用 \texttt{goto} 在程序中随意跳转，使控制流难以追踪。只向前跳到函数末尾清理代码的 \texttt{goto} 不会造成这个问题，反而比前面几种写法更清楚。Linux 内核的编码规范专门有一节，推荐用 \texttt{goto} 集中处理函数的退出\cite{linux-coding-style}。
+
+\subsection{单一出口标签}
+
+代码~\ref{lst:goto-single} 只有一个标签 \texttt{out}，所有失败都跳到这里。
+
+\codefile{code/ch03/goto_single.c}{goto 到单一出口}{lst:goto-single}
+
+它的结构和 \texttt{do \{ \} while (FALSE)} 几乎一样：\texttt{break} 换成了 \texttt{goto out}，循环后面的代码换成了标签 \texttt{out:} 后面的代码。区别在于：
+\begin{itemize}
+  \item 没有伪装成循环的代码块，读者不需要先想明白“这个循环只执行一次”。
+  \item \texttt{goto} 可以从任意深度的循环或 \texttt{switch} 中直接跳到出口，不存在 \texttt{break} 只能跳出一层的问题。
+\end{itemize}
+
+清理代码中，\texttt{free(buf)} 不需要判断 \texttt{buf} 是否为空，因为 C 标准规定 \texttt{free(NULL)} 什么也不做；\texttt{fclose} 没有这个保证，所以要先判断 \texttt{fp}。
+
+这种写法要求所有资源变量在第一个 \texttt{goto} 之前就已经初始化为空值，否则清理代码会去释放一个还没拿到的资源。Linux 内核的编码规范把这类错误称为“one err bug”\cite{linux-coding-style}。
+
+\subsection{分层标签}
+
+Linux 内核中更常见的是代码~\ref{lst:ladder} 这样的写法：每个资源对应一个标签，标签按与获取资源相反的顺序排列。
+
+\codefile{code/ch03/goto_ladder.c}{分层标签（Linux 内核风格）}{lst:ladder}
+
+读法是：哪一步失败，就跳到释放“在它之前已经拿到的资源”的那个标签。例如 \texttt{fread} 失败时，缓冲区和文件都已经拿到，所以跳到 \texttt{err\_free}；执行完 \texttt{free(buf)} 后，代码继续往下执行到 \texttt{err\_close}，关闭文件。\texttt{malloc} 失败时还没有缓冲区，所以直接跳到 \texttt{err\_close}。
+
+这种写法的优点是清理代码不需要判断变量是否为空，每个标签只做一件事；增加资源时，只需在释放它的位置加一个标签。缺点是成功路径要在标签之前自己释放不再需要的资源（这里是 \texttt{fclose}）并返回，所以函数有两个 \texttt{return}；如果跳错了标签，就会泄漏或重复释放资源。
+
+Linux 内核的编码规范建议标签名说明它做什么，比如 \texttt{err\_free}，而不是 \texttt{err1}、\texttt{err2}\cite{linux-coding-style}。这样增删步骤时不用给标签重新编号，检查每个 \texttt{goto} 是否跳对了也更容易。
+
+\subsection{使用 goto 的规则}
+
+\begin{itemize}
+  \item 只向前跳，而且只跳到函数末尾的清理代码。
+  \item 不要跳进 \texttt{if} 或循环等代码块的内部。
+  \item 不要跳过变量的初始化。C 语言不允许从可变长数组（VLA）的作用域之外跳进它的作用域；C++ 不允许跳过带初始化的变量声明。把变量都声明在函数开头，可以避免这个问题。
+  \item 标签名说明它做什么。
+\end{itemize}
+
+\section{模式三：提前返回}
+\label{sec:early-return}
+
+如果函数出错时还没有拿到任何资源，就不需要统一出口，直接 \texttt{return} 最清楚。最常见的是函数开头的参数检查，例如设置串口波特率的函数：
+\begin{minted}[linenos=false]{c}
+int uart_set_baud(struct uart *u, unsigned int baud)
+{
+    if (u == NULL)
+        return -EINVAL;
+    if (baud == 0 || baud > UART_MAX_BAUD)
+        return -ERANGE;
+
+    u->regs->div = u->clk_hz / (16 * baud);
+    return 0;
+}
+\end{minted}
+
+这种写法称为“卫语句”（guard clause）：先把不满足条件的情况排除掉，剩下的代码就是成功路径。代码~\ref{lst:ladder} 中，第一步 \texttt{fopen} 失败时也直接返回，因为这时还没有任何资源需要释放。
+
+提前返回和统一出口可以一起使用：先用几个提前返回检查参数，再进入用 \texttt{goto} 或 \texttt{do \{ \} while (FALSE)} 组织的主体。规则只有一条：一旦拿到了需要释放的资源，就不要再直接 \texttt{return}。
+
+\section{三种写法的比较}
+
+表~\ref{tab:compare} 对比了本章介绍的几种写法。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{几种错误处理写法的比较}
+  \label{tab:compare}
+  \begin{tabular}{L{2.4cm}L{1.8cm}L{3.0cm}L{3.0cm}L{3.0cm}}
+    \toprule
+    写法 & 离开方式 & 清理代码 & 适用场合 & 主要风险 \\
+    \midrule
+    \texttt{do \{ \} while (FALSE)} & \texttt{break} & 循环之后，判断资源是否为空 & Windows 代码；规范不允许 \texttt{goto} 的项目 & 内层循环或 \texttt{switch} 中的 \texttt{break} 跳不出去 \\
+    \addlinespace
+    \texttt{goto} 单一标签 & \texttt{goto out} & 标签之后，判断资源是否为空 & 一般的 C 代码 & 资源变量没有初始化为空值 \\
+    \addlinespace
+    \texttt{goto} 分层标签 & \texttt{goto err\_xxx} & 每个标签释放一个资源 & Linux 内核风格；资源较多时 & 跳错标签 \\
+    \addlinespace
+    提前返回 & \texttt{return} & 无 & 还没有拿到任何资源时 & 拿到资源后仍然直接返回 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+选择哪一种，首先要看项目已有的规范。在一个已有的代码库里，与周围代码保持一致，比选择哪一种“更好”的写法重要得多。如果是新项目，\texttt{goto} 单一标签通常是最简单的选择。
+
+\section{配套的编程习惯}
+
+\begin{itemize}
+  \item \textbf{释放函数接受空值。}\texttt{free(NULL)} 什么也不做，所以清理代码可以直接写 \texttt{free(buf)}。自己写的释放函数也应该接受 \texttt{NULL}，调用方就不用每次判断。
+  \item \textbf{交出所有权后置空。}把资源交给调用者或其他模块之后，立即把本地变量置为空值，清理代码就不会释放它（代码~\ref{lst:nt} 和代码~\ref{lst:goto-single}）。
+  \item \textbf{及时保存错误码。}\texttt{errno} 会被后面的库函数调用改写，Windows 的 \texttt{GetLastError()} 也一样。出错后要立即把它保存到自己的变量里。
+  \item \textbf{输出参数先置空。}函数开头把输出参数设为空值，调用者在失败时就不会拿到一个无效的指针。
+  \item \textbf{不要用宏隐藏跳转。}\texttt{\#define CHECK(x) if (!(x)) goto out} 看起来能省几行，但读代码时看不到跳转，和 \texttt{if}/\texttt{else} 搭配时也容易出错。Linux 内核的编码规范也明确反对影响控制流的宏\cite{linux-coding-style}。
+\end{itemize}
+
+\section{编译器和其他语言的支持}
+
+GCC 和 Clang 提供了 \texttt{\_\_attribute\_\_((cleanup(func)))}：变量离开作用域时，编译器自动调用 \texttt{func} 释放它。Linux 内核从 6.5 版本开始在 \texttt{include/linux/cleanup.h} 中基于这个特性提供了 \texttt{\_\_free()} 等辅助宏，一部分代码已经不再需要手写 \texttt{goto}。C++ 的析构函数（RAII）和 Rust 的 \texttt{Drop} 则把“离开作用域时释放资源”做进了语言本身。
+
+不过，在启动代码、固件和大多数驱动程序中，我们写的仍然是标准 C。本章介绍的几种写法，仍然是写好这些代码的基本功。
+
+\section{小结}
+
+\begin{itemize}
+  \item C 语言没有异常，每一步操作都要检查返回值，失败时要释放已经拿到的资源。
+  \item 好的函数结构是：成功路径自上而下，失败路径统一出口。
+  \item 实现统一出口有两种常用写法：Windows 风格的 \texttt{do \{ \} while (FALSE)} 加 \texttt{break}，以及 Linux 风格的 \texttt{goto}。还没有拿到资源时，可以直接提前返回。
+  \item 配套的习惯包括：资源变量初始化为空值、交出所有权后置空、及时保存错误码、不用宏隐藏跳转。
+\end{itemize}
+
+\section*{练习}
+
+\begin{enumerate}
+  \item 把代码~\ref{lst:nested} 改写成 \texttt{do \{ \} while (0)} 的写法，保存为 \texttt{code/ch03/do\_while.c}，把它加入 \texttt{Makefile} 中的 \texttt{VARIANTS}，然后运行 \texttt{make test} 验证。
+  \item 在代码~\ref{lst:ladder} 中增加第三个资源：读取成功后，再分配一块同样大小的缓冲区，把文件内容转换为大写后存入其中，并把这块缓冲区交给调用者。需要增加哪个标签？原来的哪些 \texttt{goto} 需要修改？
+\end{enumerate}
