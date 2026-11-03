@@ -1,0 +1,4 @@
+main   的 m 住在 0x7fffffffe564
+ first  的 a 住在 0x7fffffffe544
+  second 的 b 住在 0x7fffffffe524
+    third  的 c 住在 0x7fffffffe504

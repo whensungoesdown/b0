@@ -24,7 +24,7 @@
 \usepackage{xcolor}
 \usepackage[labelsep=quad]{caption}   % 题注写作“图 3.1　标题”
 \usepackage{tikz}
-\usetikzlibrary{positioning, calc, arrows.meta}
+\usetikzlibrary{positioning, calc, arrows.meta, decorations.pathreplacing}
 
 % ---------- 代码 ----------
 % minted 用 Pygments 高亮，通过 latexminted 调用（见 .latexmkrc 和 tools/latexminted）
@@ -39,6 +39,8 @@
   style=default,
   tabsize=4,
   breaklines,
+  % 代码里中英文之间不要自动加空格，否则 printf("你好") 会显示成 printf(" 你好")
+  formatcom=\xeCJKsetup{CJKecglue={}},
 }
 \SetupFloatingEnvironment{listing}{name=代码, listname=代码清单, within=chapter}
 
@@ -88,6 +90,7 @@
 \include{chapters/ch01}
 \include{chapters/ch02}
 \include{chapters/ch03}
+\include{chapters/ch04}
 
 \appendix
 \include{backmatter/appendix}

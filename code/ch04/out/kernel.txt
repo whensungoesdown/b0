@@ -1,0 +1,5 @@
+$ ./kernel
+我要往 0xffffffff81000000 写一个数……
+Segmentation fault         ./kernel
+$ echo $?
+139
