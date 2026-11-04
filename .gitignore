@@ -42,3 +42,11 @@ code/ch04/heap_asan
 code/ch04/bits32
 code/ch04/bits64
 code/ch04/layout64
+code/ch05/use_greet
+code/ch05/layers
+code/ch05/file
+code/ch05/hello
+code/ch05/greet.o
+code/ch05/libgreet.a
+code/ch05/diary.txt
+code/ch05/*.exe

@@ -1,0 +1,8 @@
+$ gcc -c greet.c -o greet.o
+$ ar rcs libgreet.a greet.o
+$ ar t libgreet.a
+greet.o
+$ nm libgreet.a
+0000000000000000 T greet
+                 U printf
+0000000000000047 T sum_to

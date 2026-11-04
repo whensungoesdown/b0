@@ -1,0 +1,422 @@
+\chapter{和操作系统打交道}
+\label{chap:os}
+
+学到这里，你已经会用 C 语言写程序了：会用变量，会做决定，会循环，还知道了内存和指针是怎么回事。可是有一件事，你也许从来没有想过：我们的程序，自己其实什么也干不了。
+
+它不能自己在屏幕上写字，不能自己读键盘，不能自己打开一个文件。屏幕、键盘、硬盘，全都归操作系统管（第~\ref{sec:kernel-space}~节）。程序想做这些事，只能请操作系统帮忙。可我们写程序时，从来没有“请”过操作系统，只是调用了 \texttt{printf}、\texttt{scanf}、\texttt{fopen} 这些函数。这些函数是谁写的？它们又是怎样去找操作系统的？
+
+这一章就来回答这两个问题。答案是两个词：\emph{函数库}和\emph{系统调用}。
+
+本章的示例在 \texttt{code/ch05/} 目录中。除了 Linux 的程序，还有几个 Windows 的程序，它们可以在 Linux 上用 MinGW 交叉编译器编译出 \texttt{.exe} 文件（需要先安装 \texttt{gcc-mingw-w64-x86-64}），拷到 Windows 上运行；在 WSL 中也可以直接运行。查看系统调用还要用到 \texttt{strace} 这个工具。
+
+\section{函数库：打包好的代码}
+\label{sec:library}
+
+\subsection{自己做一个函数库}
+
+\emph{函数库}（library，简称“库”）就是一些写好了、编译好了、打包在一起的函数，供别的程序使用。它一点也不神秘，我们自己就能做一个。先写一个头文件，说明库里有哪些函数：
+
+\codefile{code/ch05/greet.h}{函数库的头文件}{lst:greet-h}
+
+再写出这些函数：
+
+\codefile{code/ch05/greet.c}{函数库的代码}{lst:greet-c}
+
+把它编译成目标文件，再用 \texttt{ar} 命令打包成一个库：
+\inputminted[linenos=false]{text}{code/ch05/out/build_lib.txt}
+
+\texttt{ar}（archive，归档）把一个或几个目标文件装进一个“包裹”里，这就是一个\emph{静态库}，文件名按规矩以 \texttt{lib} 开头、以 \texttt{.a} 结尾。\texttt{ar t} 列出包裹里有什么，\texttt{nm} 列出包裹里有哪些函数：\texttt{T} 表示这个函数就在这里（第~\ref{chap:hello}~章见过），\texttt{U} 表示这个函数在这里用到了，却不在这里——\texttt{greet} 要调用 \texttt{printf}，可 \texttt{printf} 不在我们的库里。我们的库，自己又用着别人的库。
+
+使用这个库的程序，只要包含头文件，然后调用库里的函数：
+
+\codefile{code/ch05/use_greet.c}{使用我们自己的函数库}{lst:use-greet}
+
+编译时告诉 \texttt{gcc} 去哪里找库、用哪个库：
+\begin{minted}[linenos=false]{text}
+gcc use_greet.c -L. -lgreet -o use_greet
+\end{minted}
+\texttt{-L.} 是说“在当前目录里找库”，\texttt{-lgreet} 是说“使用 \texttt{libgreet.a}”（前面的 \texttt{lib} 和后面的 \texttt{.a} 省掉不写）。运行结果：
+\inputminted[linenos=false]{text}{code/ch05/out/use_greet.txt}
+
+\texttt{use\_greet.c} 根本不知道 \texttt{greet} 和 \texttt{sum\_to} 是怎么写的，它只看了头文件，知道这两个函数叫什么、要什么参数、交回什么。这正是函数库的意义：把一件事做好、包装好，别人拿来就用，不用关心里面是怎么做的（图~\ref{fig:toolbox}）。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    % 工具箱
+    \filldraw[fill=red!55] (0,0) rectangle (6,1.6);
+    \filldraw[fill=red!40] (-0.15,1.6) rectangle (6.15,2.0);
+    \draw[line width=3pt, gray!60!black] (2.3,2.0) -- (2.3,2.5) -- (3.7,2.5) -- (3.7,2.0);
+    \fill[gray!70] (2.75,1.65) rectangle (3.25,1.95);
+    \node[white, font=\bfseries] at (3,0.8) {C 标准库};
+    % 工具
+    \node[draw, fill=yellow!40, rotate=12, font=\ttfamily\small] at (0.8,2.6) {printf};
+    \node[draw, fill=green!25, rotate=-8, font=\ttfamily\small] at (1.4,3.3) {strlen};
+    \node[draw, fill=blue!15, rotate=5, font=\ttfamily\small] at (4.6,2.75) {malloc};
+    \node[draw, fill=orange!30, rotate=-12, font=\ttfamily\small] at (5.3,3.4) {fopen};
+    \node[draw, fill=violet!15, rotate=3, font=\ttfamily\small] at (3.0,3.4) {sqrt};
+    % 小人拿了一把
+    \draw (7.4,1.55) circle (0.22);
+    \draw (7.4,1.33) -- (7.4,0.55);
+    \draw (7.4,0.55) -- (7.2,0) (7.4,0.55) -- (7.6,0);
+    \draw (7.4,1.15) -- (7.05,0.95);
+    \draw (7.4,1.15) -- (7.75,1.45);
+    \node[draw, fill=yellow!40, rotate=30, font=\ttfamily\scriptsize] at (7.95,1.75) {scanf};
+    \node[font=\small, align=center] at (7.4,-0.4) {你的程序};
+    \draw[gray, line width=1pt] (-0.5,0) -- (8.6,0);
+  \end{tikzpicture}
+  \caption{函数库就像一个工具箱：工具都是现成的，拿来就用}
+  \label{fig:toolbox}
+\end{figure}
+
+\paragraph{静态库和动态库。}
+用静态库编译时，链接器把库里用到的那部分代码，原样复制进程序里。程序因此大一些，但运行时不再需要这个库。另一种是\emph{动态库}（Linux 上以 \texttt{.so} 结尾，Windows 上是 \texttt{.dll}）：链接时只记下“需要哪个库”，等程序运行时，再由动态链接器把库加载进内存。第~\ref{chap:hello}~章用 \texttt{ldd} 看到的 \texttt{libc.so.6}，就是一个动态库。几百个程序同时运行，内存里只需要一份 \texttt{libc.so.6}，大家共用，这也是动态库又叫\emph{共享库}的原因。
+
+\subsection{C 标准库}
+
+\texttt{printf} 是谁写的？答案是：C \emph{标准库}。C 语言的标准不仅规定了语法，还规定了一套所有 C 程序都能用的函数，以及声明这些函数的头文件（表~\ref{tab:libc}）。我们到现在为止用过的 \texttt{printf}、\texttt{scanf}、\texttt{malloc}、\texttt{free}、\texttt{fopen}，都来自 C 标准库。
+
+\begin{table}[htbp]
+  \centering
+  \caption{C 标准库中常用的头文件}
+  \label{tab:libc}
+  \begin{tabular}{lll}
+    \toprule
+    头文件 & 管什么 & 例子 \\
+    \midrule
+    \texttt{stdio.h}  & 输入输出、文件 & \texttt{printf}、\texttt{scanf}、\texttt{fopen}、\texttt{fclose} \\
+    \texttt{stdlib.h} & 内存、杂项     & \texttt{malloc}、\texttt{free}、\texttt{rand}、\texttt{exit} \\
+    \texttt{string.h} & 字符串         & \texttt{strlen}、\texttt{strcpy}、\texttt{memcpy} \\
+    \texttt{math.h}   & 数学           & \texttt{sqrt}、\texttt{sin}、\texttt{pow} \\
+    \texttt{time.h}   & 时间           & \texttt{time}、\texttt{clock} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+标准只规定了这些函数“做什么”，没有规定“怎么做”。每个操作系统上，都有人按照标准把它们实现出来：
+\begin{itemize}
+  \item Linux 上最常用的是 GNU 的 C 库，叫 \emph{glibc}，也就是我们一直在用的 \texttt{libc.so.6}；另外还有小巧的 musl，安卓手机上用的是 Bionic。
+  \item Windows 上，C 标准库由微软的 C 运行库提供，比如老一些的 \texttt{msvcrt.dll} 和新一些的 UCRT（\texttt{ucrtbase.dll}）。
+\end{itemize}
+不要把 glibc 和 \emph{GLib} 弄混了。GLib 是另一个库，是 GNOME 桌面和 GTK 图形界面的基础，提供链表、哈希表、事件循环这些更高级的工具。它自己就是用 C 写的，用着 glibc 提供的函数——又是一个“库用着库”的例子。
+
+\section{最后都要找操作系统：系统调用}
+\label{sec:syscall}
+
+\subsection{打印一行字的三种方法}
+
+C 标准库再厉害，也还是一段普通的代码，运行在用户态，同样碰不得屏幕。它最后也得去请操作系统。下面的程序用三种方法各打印一行字，一种比一种更接近操作系统：
+
+\codefile{code/ch05/layers.c}{打印一行字的三种方法}{lst:layers}
+
+\inputminted[linenos=false]{text}{code/ch05/out/layers.txt}
+
+\begin{enumerate}
+  \item \texttt{printf} 是 C 标准库的函数，最好用，能按 \texttt{\%d} 这样的格式把数转换成字。
+  \item \texttt{write} 不在 C 标准库里，它是 POSIX 标准规定的函数。POSIX 是 Linux、macOS 这一类操作系统共同遵守的标准，比 C 标准离操作系统更近一步。\texttt{write} 只会原样写出一串字节，不会做格式转换。
+  \item \texttt{syscall} 直接发起\emph{系统调用}：告诉操作系统，我要做第几号服务，参数是什么。\texttt{SYS\_write} 就是“写”这项服务的编号，在 x86-64 的 Linux 上是 1。
+\end{enumerate}
+
+程序开头的 \texttt{\#define \_DEFAULT\_SOURCE} 是告诉 glibc：除了 C 标准库，我还要用 \texttt{syscall} 这样 Linux 特有的函数。
+
+\subsection{用 strace 偷看系统调用}
+
+这三种方法，到了操作系统那里有什么区别？\texttt{strace} 可以告诉我们。它能把一个程序发出的每一个系统调用都记录下来。只看 \texttt{write} 这一种：
+\begin{minted}[linenos=false]{text}
+strace -e trace=write ./layers
+\end{minted}
+\inputminted[linenos=false]{text}{code/ch05/out/strace_layers.txt}
+
+三种方法，在操作系统看来一模一样，都是一次 \texttt{write} 系统调用：往 1 号文件（标准输出）写若干个字节，等号后面是实际写了多少字节。最后一行说程序退出了，退出状态是 0。\texttt{printf}、\texttt{write}、\texttt{syscall} 就像一套俄罗斯套娃：一层套着一层，打开到最里面，都是同一个系统调用（图~\ref{fig:matryoshka}）。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    \foreach \x/\s/\c/\d/\t in {0/1.0/red!55/red!60!black/printf, 3.0/0.78/orange!60/orange!60!black/write, 5.5/0.6/yellow!60/yellow!40!black/syscall} {
+      \begin{scope}[shift={(\x,0)}, scale=\s]
+        % 身体
+        \filldraw[fill=\c] (0,0) .. controls (-1.2,0) and (-1.2,1.6) .. (-0.75,2.0)
+                           .. controls (-0.9,2.3) .. (-0.55,2.6)
+                           arc[start angle=180, end angle=0, radius=0.55]
+                           .. controls (0.9,2.3) .. (0.75,2.0)
+                           .. controls (1.2,1.6) and (1.2,0) .. (0,0);
+        % 脸
+        \filldraw[fill=yellow!10] (0,2.6) circle (0.38);
+        \fill (-0.13,2.66) circle (0.04) (0.13,2.66) circle (0.04);
+        \draw (-0.12,2.47) arc[start angle=200, end angle=340, radius=0.13];
+        \fill[red!40] (-0.24,2.52) circle (0.06) (0.24,2.52) circle (0.06);
+        % 花
+        \fill[white] (0,1.0) circle (0.3);
+        \fill[\d] (0,1.0) circle (0.12);
+      \end{scope}
+      \node[font=\ttfamily] at (\x,-0.35) {\t};
+    }
+    \draw[-{Stealth}, thick] (1.1,1.2) -- (2.2,1.2);
+    \draw[-{Stealth}, thick] (3.85,1.0) -- (4.85,1.0);
+    \node[font=\small, align=center] at (2.75,3.75) {一层套着一层，打开到最里面，\\都是同一个 \texttt{write} 系统调用};
+  \end{tikzpicture}
+  \caption{\texttt{printf}、\texttt{write}、\texttt{syscall} 就像一套俄罗斯套娃}
+  \label{fig:matryoshka}
+\end{figure}
+
+\subsection{餐厅里的点菜窗口}
+
+系统调用可以想象成餐厅里的点菜窗口（图~\ref{fig:restaurant}）。客人（你的程序）不能自己走进厨房（内核）去炒菜，只能把要做的菜写在单子上，从窗口递进去。服务员（函数库）很体贴：你只要说“来一份宫保鸡丁”（调用 \texttt{printf}），他就替你填好单子（准备好系统调用的编号和参数），递进窗口（执行系统调用），等菜做好了再端给你（把结果交回给你的程序）。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    % 厨房墙和窗口
+    \fill[gray!25] (5.6,0) rectangle (9.4,3.6);
+    \draw (5.6,0) -- (5.6,3.6);
+    \filldraw[fill=white] (5.45,1.6) rectangle (5.75,2.5);
+    \node[font=\small\bfseries, fill=white, inner sep=1pt] at (5.6,1.25) {窗口};
+    \node[font=\bfseries] at (7.6,3.3) {厨房（内核）};
+    % 厨师
+    \draw (7.8,2.0) circle (0.22);
+    \filldraw[fill=white] (7.58,2.18) -- (7.6,2.55) .. controls (7.8,2.75) .. (8.0,2.55) -- (8.02,2.18) -- cycle;
+    \draw (7.8,1.78) -- (7.8,1.0);
+    \draw (7.8,1.0) -- (7.6,0.3) (7.8,1.0) -- (8.0,0.3);
+    \draw (7.8,1.55) -- (8.3,1.35);
+    \draw (7.8,1.55) -- (7.35,1.35);
+    % 锅
+    \filldraw[fill=gray!60] (8.35,1.25) arc[start angle=180, end angle=360, x radius=0.45, y radius=0.25] -- cycle;
+    \draw (9.25,1.25) -- (9.45,1.4);
+    \foreach \x in {8.55,8.8,9.05} \draw[gray] (\x,1.35) .. controls (\x-0.1,1.55) and (\x+0.1,1.65) .. (\x,1.85);
+    % 服务员
+    \draw (4.4,2.0) circle (0.22);
+    \draw (4.4,1.78) -- (4.4,1.0);
+    \draw (4.4,1.0) -- (4.2,0.3) (4.4,1.0) -- (4.6,0.3);
+    \draw (4.4,1.55) -- (4.95,1.85);
+    \draw (4.4,1.55) -- (4.0,1.35);
+    \fill[black] (4.25,1.5) -- (4.55,1.5) -- (4.4,1.35) -- cycle;
+    \node[draw, fill=yellow!40, font=\ttfamily\scriptsize, inner sep=2pt, rotate=-5] at (4.75,2.75) {write(1, ...)};
+    \node[font=\small, align=center] at (4.4,-0.3) {服务员\\（函数库）};
+    % 客人和桌子
+    \fill[brown!50] (0.6,0.9) rectangle (2.4,1.0);
+    \draw[brown!60!black, line width=2pt] (0.8,0.9) -- (0.8,0.3) (2.2,0.9) -- (2.2,0.3);
+    \draw (1.3,1.75) circle (0.22);
+    \draw (1.3,1.53) -- (1.3,0.95);
+    \draw (1.3,1.35) -- (1.85,1.6);
+    \node[draw, rounded corners, fill=white, font=\small] (say) at (2.0,2.85) {\xeCJKsetup{CJKecglue={}}\texttt{printf("你好")}！};
+    \draw (say.south) ++(-0.3,0) -- (1.5,2.0);
+    \node[font=\small, align=center] at (1.5,-0.3) {客人\\（你的程序）};
+    \draw[gray, line width=1pt] (0,0.3) -- (9.4,0.3);
+    \draw[gray, line width=1pt] (9.4,0) -- (9.4,0.3);
+  \end{tikzpicture}
+  \caption{系统调用就像餐厅的点菜窗口}
+  \label{fig:restaurant}
+\end{figure}
+
+\subsection{Hello, world 的冰山}
+
+一个只打印一行字的 Hello, world，一共要请操作系统帮多少次忙？用 \texttt{strace -c} 统计一下（\texttt{-c} 是 count，计数）：
+\begin{minted}[linenos=false]{text}
+strace -c ./hello
+\end{minted}
+统计表很长，每种系统调用占一行，这里只留下表头和最后的合计行：
+\inputminted[linenos=false]{text}{code/ch05/out/strace_hello_count.txt}
+
+\texttt{calls} 那一列是调用的次数：一共 35 次！（\texttt{errors} 那一列是失败的次数，比如去找一个不存在的文件。）其中真正打印那一行字的，只有最后的一次 \texttt{write}：
+\inputminted[linenos=false]{text}{code/ch05/out/strace_hello_tail.txt}
+
+其余的三十多次，都是在 \texttt{main} 开始之前做的准备工作：操作系统运行程序（\texttt{execve}），动态链接器打开 \texttt{libc.so.6}、把它映射进内存（\texttt{openat}、\texttt{mmap}），设置好内存的权限（\texttt{mprotect}）……第~\ref{sec:runtime}~节讲过的那些事，在这里一件一件地现了形。最后的 \texttt{exit\_group(0)} 就是 \texttt{main} 返回 0 之后，C 标准库替我们结束整个程序。我们写的那一行 \texttt{printf}，只是露出水面的冰山一角（图~\ref{fig:iceberg}）。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    \fill[cyan!12] (-3.5,-3.6) rectangle (3.5,0);
+    \draw[cyan!60!black, line width=1.2pt]
+      (-3.5,0) \foreach \k in {1,...,14} { .. controls ++(0.125,0.12) and ++(-0.125,0.12) .. ++(0.5,0) };
+    % 水上
+    \filldraw[fill=white, draw=cyan!50!black] (-0.9,0) -- (-0.4,1.0) -- (0.1,0.7) -- (0.5,1.3) -- (1.0,0) -- cycle;
+    \node[font=\ttfamily\small, fill=white, inner sep=1pt] at (0.05,1.65) {printf("Hello, world!\textbackslash n");};
+    % 水下
+    \filldraw[fill=white, fill opacity=0.85, draw=cyan!50!black]
+      (-0.9,0) -- (-2.6,-1.2) -- (-2.9,-2.6) -- (-1.6,-3.4) -- (1.4,-3.5) -- (2.8,-2.4) -- (2.4,-1.0) -- (1.0,0) -- cycle;
+    \node[font=\ttfamily\scriptsize, align=center, text=blue!40!black] at (0,-1.75)
+      {execve \quad brk \quad mmap \quad access \\ openat \quad read \quad pread64 \quad fstat \\
+       mmap \quad mmap \quad mmap \quad close \\ arch\_prctl \quad set\_tid\_address \\
+       rseq \quad mprotect \quad mprotect \quad getrandom \\ \ldots\ldots \quad write \quad exit\_group};
+    \node[font=\small, anchor=west] at (3.6,0.9) {你写的};
+    \node[font=\small, anchor=west, align=left] at (3.6,-1.8) {操作系统\\实际做的\\（35 次系统调用）};
+  \end{tikzpicture}
+  \caption{Hello, world 的冰山}
+  \label{fig:iceberg}
+\end{figure}
+
+\subsection{系统调用到底是什么}
+
+那么，\texttt{syscall} 这个函数本身，又是怎么“递进窗口”的？把 glibc 中的 \texttt{syscall} 反汇编出来，它的核心只有这么几行（x86-64）：
+\begin{minted}[linenos=false]{text}
+mov    %rdi,%rax       # 第 1 个参数（系统调用的编号）放进 rax
+mov    %rsi,%rdi       # 其余的参数依次挪进 rdi、rsi、rdx……
+mov    %rdx,%rsi
+mov    %rcx,%rdx
+syscall                # 进入内核！
+ret
+\end{minted}
+系统调用，说到底就是一条 CPU 指令。x86-64 上叫 \texttt{syscall}，RISC-V 上叫 \texttt{ecall}。执行它之前，程序先把服务的编号放进一个约定好的寄存器（x86-64 是 \texttt{rax}），把参数放进另外几个寄存器；执行它时，CPU 从用户态切换到内核态，跳到内核事先登记好的入口（第~\ref{sec:kernel-space}~节）；内核看看编号，知道你要做什么，办完以后把结果放进 \texttt{rax}，再切换回用户态，回到 \texttt{syscall} 的下一条指令。
+
+Linux 一共提供了三百多个系统调用，每个都有自己的编号：在 x86-64 上，\texttt{write} 是 1，\texttt{getpid}（问一问自己的进程号）是 39，\texttt{exit\_group} 是 231。这些编号写在头文件 \texttt{asm/unistd\_64.h} 里，一旦定下来就永远不改，所以二十年前编译的程序，今天的 Linux 照样能运行。
+
+\section{写一个文件}
+\label{sec:file}
+
+再看一个例子。下面的程序新建一个文件，往里面写一句话：
+
+\codefile{code/ch05/file.c}{写一个文件}{lst:file}
+
+\texttt{fopen} 打开一个文件，交回一个 \texttt{FILE *}——一个指向“文件信息”的指针，以后读写这个文件，都要把它交给标准库。\texttt{"w"} 表示要写（write），文件不存在就新建，已经存在就清空。\texttt{fprintf} 和 \texttt{printf} 一样，只是写进文件里而不是屏幕上。用完以后，\texttt{fclose} 关闭文件。打开失败时 \texttt{fopen} 交回 \texttt{NULL}，所以要检查一下。
+
+用 \texttt{strace} 看看它们变成了哪些系统调用：
+\begin{minted}[linenos=false]{text}
+strace -e trace=openat,write,close ./file
+\end{minted}
+\inputminted[linenos=false]{text}{code/ch05/out/strace_file.txt}
+
+\begin{table}[htbp]
+  \centering
+  \caption{C 标准库的函数和它们用到的系统调用}
+  \label{tab:file-syscalls}
+  \begin{tabular}{lll}
+    \toprule
+    C 标准库 & Linux 系统调用 & 做什么 \\
+    \midrule
+    \texttt{fopen("diary.txt", "w")} & \texttt{openat} & 打开文件，内核交回一个号码 3 \\
+    \texttt{fprintf(fp, ...)}         & \texttt{write(3, ...)} & 往 3 号文件里写 \\
+    \texttt{fclose(fp)}               & \texttt{close(3)} & 关闭 3 号文件 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+对照表~\ref{tab:file-syscalls}，一一对应。内核把打开的文件编上号，叫做\emph{文件描述符}：0 是标准输入（键盘），1 是标准输出（屏幕），2 是标准错误，新打开的文件从 3 开始编号。\texttt{printf} 往屏幕上写，用的就是 1 号；\texttt{layers.c} 里的 \texttt{write(1, ...)}，那个 1 也是这个意思。
+
+注意，\texttt{fprintf} 并没有马上发出 \texttt{write}，而是先把字攒在缓冲区里，等到 \texttt{fclose} 时才一次写出去。系统调用要进出内核，比普通的函数调用慢得多，所以标准库能少调用一次就少调用一次——这也是服务员替我们做的一件好事。
+
+\section{\texorpdfstring{\NoCaseChange{Windows}}{Windows} 上：\texorpdfstring{\NoCaseChange{Win32 API}}{Win32 API}}
+\label{sec:win32}
+
+\subsection{用 Win32 API 写程序}
+
+Windows 也有自己的内核，也有系统调用，但微软并不希望程序直接去碰它们。Windows 给程序员的是另一套接口：\emph{Win32 API}。它是由 \texttt{kernel32.dll}、\texttt{user32.dll}、\texttt{gdi32.dll} 等一大批动态库提供的几千个函数，打开文件、创建窗口、画图、联网……Windows 上的程序几乎都要通过它们来做事。
+
+先看一个用 Win32 API 打印一行字的程序：
+
+\codefile{code/ch05/win_hello.c}{用 Win32 API 打印一行字}{lst:win-hello}
+
+\begin{itemize}
+  \item \texttt{windows.h} 是 Win32 API 的总头文件。
+  \item \texttt{HANDLE} 叫\emph{句柄}，是 Windows 用来指代一个“东西”的号码，比如一个打开的文件、一个窗口。它的作用，和 Linux 的文件描述符差不多。\texttt{GetStdHandle(STD\_OUTPUT\_HANDLE)} 拿到的就是标准输出的句柄。
+  \item \texttt{DWORD} 是 Windows 自己起名字的 32 位无符号整数类型。Win32 API 里这样的名字很多，比如 \texttt{BOOL}、\texttt{LPCSTR}，看多了就习惯了。
+  \item \texttt{WriteFile} 往一个句柄里写一串字节，最后两个参数分别用来交回实际写了多少字节，以及做“异步”读写（这里用不到，给 \texttt{NULL}）。注意交给它的是 \texttt{\&written}——它要把结果写进我们的变量，所以要的是地址（第~\ref{sec:swap}~节）。
+\end{itemize}
+
+在 Linux 上用 MinGW 交叉编译器编译，就得到一个 Windows 程序：
+\begin{minted}[linenos=false]{text}
+x86_64-w64-mingw32-gcc win_hello.c -o win_hello.exe
+\end{minted}
+把 \texttt{win\_hello.exe} 拷到 Windows 上，在命令行窗口里运行（在 WSL 中直接运行 \texttt{./win\_hello.exe} 也可以）：
+\inputminted[linenos=false]{text}{code/ch05/out/win_hello.txt}
+
+Win32 API 当然不只会打印字。下面这个程序弹出一个对话框问你问题，它用的 \texttt{MessageBoxW} 在 \texttt{user32.dll} 里（\texttt{W} 表示字符串是“宽字符”的，可以写中文，字符串前面的 \texttt{L} 也是这个意思）：
+
+\codefile{code/ch05/win_msgbox.c}{弹出一个对话框}{lst:win-msgbox}
+
+在 Windows 中双击 \texttt{win\_msgbox.exe}，就会弹出图~\ref{fig:msgbox} 那样的对话框。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.7pt]
+    \filldraw[fill=white, draw=gray!70] (0,0) rectangle (6.4,2.8);
+    \fill[blue!60] (0,2.35) rectangle (6.4,2.8);
+    \node[white, font=\small, anchor=west] at (0.15,2.575) {来自 Win32 的问候};
+    \node[white, font=\small] at (6.15,2.575) {\texttimes};
+    \filldraw[fill=blue!70, draw=blue!80!black] (0.9,1.55) circle (0.35);
+    \node[white, font=\bfseries] at (0.9,1.55) {?};
+    \node[anchor=west] at (1.5,1.55) {今天学 C 语言了吗？};
+    \filldraw[fill=gray!10, draw=gray] (2.9,0.25) rectangle (4.2,0.75);
+    \node[font=\small] at (3.55,0.5) {是(Y)};
+    \filldraw[fill=gray!10, draw=gray] (4.5,0.25) rectangle (5.8,0.75);
+    \node[font=\small] at (5.15,0.5) {否(N)};
+  \end{tikzpicture}
+  \caption{\texttt{win\_msgbox.exe} 弹出的对话框（示意图）}
+  \label{fig:msgbox}
+\end{figure}
+
+\subsection{printf 在 Windows 上}
+
+在 Windows 上，\texttt{printf} 当然也能用，它由 Windows 的 C 运行库提供。用 \texttt{objdump -p} 可以看到每个 \texttt{.exe} 要从哪些 DLL 里引用哪些函数（这里只列出了我们关心的几个）：
+\inputminted[linenos=false]{text}{code/ch05/out/win_imports.txt}
+
+\texttt{win\_printf.exe} 引用的是 \texttt{msvcrt.dll} 里的 \texttt{puts}，而不是 \texttt{printf}——第~\ref{chap:hello}~章见过的那个小优化，在 Windows 上也一样（\texttt{win\_printf.c} 的代码见 \texttt{code/ch05/}）。而 \texttt{msvcrt.dll} 里的 \texttt{puts}，最后调用的正是 \texttt{WriteFile}。
+
+\subsection{WriteFile 的旅程}
+
+\texttt{WriteFile} 也不是终点。它在 Windows 里还要走好几站，才能见到内核。下面是从这台电脑的 Windows 系统 DLL 里反汇编出来的真实代码（Windows 版本不同，地址和细节会不一样）：
+\inputminted[linenos=false]{text}{code/ch05/out/win_chain.txt}
+
+一站一站地看：
+\begin{enumerate}
+  \item \texttt{kernel32.dll} 里的 \texttt{WriteFile} 只有一条 \texttt{jmp} 指令，直接跳走了——真正的代码早就搬到了 \texttt{KernelBase.dll} 里，这里只是一个留下来的“门牌”，好让老程序也能找到它。
+  \item \texttt{KernelBase.dll} 里的 \texttt{WriteFile} 检查好参数，调用 \texttt{ntdll.dll} 里的 \texttt{NtWriteFile}。那条 \texttt{call} 指令要去的地址，是“下一条指令的地址 \texttt{0xb1fbd} 加上 \texttt{0x1e7ebb}”，正好是 \texttt{0x299e78}——导入表中记着 \texttt{NtWriteFile} 真正地址的那一格。
+  \item \texttt{ntdll.dll} 是用户态的最后一站。\texttt{NtWriteFile} 把系统调用的编号 8 放进 \texttt{eax}，然后执行 \texttt{syscall}（老式的 CPU 用 \texttt{int 0x2e}）——和 Linux 一模一样，进入内核。
+\end{enumerate}
+
+这里有一个和 Linux 很不一样的地方：Windows 的系统调用编号是不公开的，而且每个 Windows 版本都可能改变。\texttt{NtWriteFile} 在这台电脑上是 8 号，换一个版本的 Windows 可能就是别的号码。所以 Windows 上的程序从来不自己发起系统调用，而是一定要通过 \texttt{ntdll.dll}，由跟着 Windows 一起发布的 \texttt{ntdll.dll} 去填写正确的编号。Linux 则公开承诺编号永远不变，程序可以直接用。
+
+图~\ref{fig:stacks} 把两个系统放在一起对比。楼层的名字不一样，结构却是一样的：程序调用库，库一层一层地往下，最后都由一条 \texttt{syscall} 指令走进内核。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      layer/.style={draw, text width=54mm, minimum height=7.5mm, font=\footnotesize, align=center},
+      line width=0.7pt,
+    ]
+    \foreach \x/\title/\a/\b/\c/\d in {
+        0/Linux/{你的程序：\texttt{printf(...)}}/{C 标准库 glibc\\（\texttt{libc.so.6}）}/{\texttt{write} 的包装函数}/{Linux 内核},
+        6.6/Windows/{你的程序：\texttt{printf} 或 \texttt{WriteFile}}/{C 运行库（\texttt{msvcrt.dll}）、Win32 API\\（\texttt{kernel32.dll}、\texttt{KernelBase.dll}）}/{\texttt{ntdll.dll}：\texttt{NtWriteFile}}/{Windows 内核（\texttt{ntoskrnl.exe}）}} {
+      \node[font=\bfseries] at (\x,4.1) {\title};
+      \node[layer, fill=green!15]  at (\x,3.3) {\a};
+      \node[layer, fill=yellow!20, minimum height=11mm] at (\x,2.2) {\b};
+      \node[layer, fill=orange!20] at (\x,1.1) {\c};
+      \node[layer, fill=gray!40, text=black] at (\x,-0.6) {\bfseries \d};
+      \draw[red!70!black, line width=1.5pt, dashed] (\x-2.9,0.25) -- (\x+2.9,0.25);
+      \draw[-{Stealth}, red!70!black, line width=1.2pt] (\x,0.75) -- (\x,-0.2);
+      \node[red!70!black, font=\scriptsize\ttfamily, fill=white, inner sep=1pt] at (\x+0.65,0.25) {syscall};
+    }
+    \node[font=\scriptsize, anchor=east, red!70!black] at (-2.95,0.45) {用户态};
+    \node[font=\scriptsize, anchor=east, red!70!black] at (-2.95,0.05) {内核态};
+  \end{tikzpicture}
+  \caption{Linux 和 Windows：楼层的名字不同，结构是一样的}
+  \label{fig:stacks}
+\end{figure}
+
+\section{回到 CPU}
+
+从 \texttt{printf} 开始，一层一层地剥下去，最后剩下的，只是一条 \texttt{syscall} 指令。这条指令让 CPU 从用户态切换到内核态，跳到操作系统的代码里去。
+
+这件事很像第~\ref{chap:memory}~章讲过的内存保护：它们都不是靠软件“约定”出来的，而是 CPU 在硬件上实现的。CPU 要记住自己现在处于哪种状态，要在执行 \texttt{syscall} 时保存好回去的地址、切换状态、跳到指定的入口，还要在用户程序越界时拦住它。等我们自己造 CPU 时，RISC-V 的 \texttt{ecall} 指令，就要靠我们亲手实现。
+
+到那时，我们的 CPU 上还没有操作系统，没有 glibc，也没有 \texttt{printf}。想在屏幕上打印一行字，要么自己往串口的地址里写字节（第~\ref{sec:mmio}~节），要么自己写一个小小的“内核”，来接住 \texttt{ecall}。这一章里看到的每一层，到时候都要我们自己从头搭起来。
+
+\section{小结}
+
+\begin{itemize}
+  \item 函数库是写好、编译好、打包在一起的函数。头文件说明库里有什么，库里放着编译好的代码。静态库（\texttt{.a}）在链接时复制进程序，动态库（\texttt{.so}、\texttt{.dll}）在运行时加载、大家共用。
+  \item C 标准库提供 \texttt{printf}、\texttt{malloc}、\texttt{fopen} 等函数。Linux 上通常是 glibc，Windows 上是微软的 C 运行库。GLib 是另一个建立在 glibc 之上的库。
+  \item 程序自己不能操作硬件，要通过系统调用请操作系统帮忙。函数库把系统调用包装起来，最终都会调用它们。\texttt{strace} 可以看到程序发出的每一个系统调用。
+  \item 系统调用就是一条 CPU 指令（x86-64 的 \texttt{syscall}、RISC-V 的 \texttt{ecall}），用寄存器传递编号和参数。Linux 的系统调用编号是公开、固定的。
+  \item 内核用文件描述符（0、1、2、3……）指代打开的文件；Windows 用句柄（\texttt{HANDLE}）。
+  \item Windows 的程序通过 Win32 API（\texttt{kernel32.dll}、\texttt{user32.dll} 等）做事，最后经过 \texttt{ntdll.dll} 进入内核。Windows 的系统调用编号不公开，会随版本变化。
+\end{itemize}
+
+\section*{练习}
+
+\begin{enumerate}
+  \item 给 \texttt{libgreet.a} 加一个新函数 \texttt{int max(int a, int b)}，在 \texttt{use\_greet.c} 中调用它。头文件和库都要修改哪些地方？
+  \item 用 \texttt{strace -c} 统计第~\ref{chap:c-basics}~章的猜数字游戏 \texttt{guess} 发出的系统调用。你每猜一次，会多出哪一种系统调用？（提示：读键盘。）
+  \item 把 \texttt{file.c} 中的 \texttt{"w"} 改成 \texttt{"a"}（append，追加），运行三次，看看 \texttt{diary.txt} 里有什么。再用 \texttt{strace} 看看 \texttt{openat} 的参数有什么不同。
+  \item 在 \texttt{layers.c} 中，去掉 \texttt{fflush(stdout);}，再把程序的输出重定向到文件：\texttt{./layers > out.txt}。打开 \texttt{out.txt}，三行的顺序变了吗？用 \texttt{strace} 解释原因。
+  \item 用 Win32 API 的 \texttt{CreateFileA}、\texttt{WriteFile}、\texttt{CloseHandle}，写一个 Windows 版的 \texttt{file.c}。
+\end{enumerate}

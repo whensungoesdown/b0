@@ -1,0 +1,6 @@
+# 所有文本文件在仓库和工作目录中都用 LF 换行。
+# 这些文件要在 WSL / Linux 中使用，CRLF 会让 shell 脚本和 Makefile 出错。
+* text=auto eol=lf
+*.png binary
+*.pdf binary
+*.exe binary
