@@ -11,7 +11,8 @@ int main(void)
     FILE *maps;
     int ch;
 
-    printf("代码        main      %p\n", (void *)main);
+    /* C99 不允许把函数的地址转换成 void *，所以先转换成整数，用 %#lx 打印 */
+    printf("代码        main      %#lx\n", (unsigned long)main);
     printf("只读数据    \"hello\"   %p\n", (void *)"hello");
     printf("数据        counter   %p\n", (void *)&counter);
     printf("BSS         table     %p\n", (void *)table);

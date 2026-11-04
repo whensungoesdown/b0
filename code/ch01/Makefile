@@ -2,6 +2,7 @@
 #   make        运行全部四步，并运行程序
 #   make hey    编译并运行“先别急着合上书”一节中的 hey.c
 #   make book   重新生成书中引用的摘录（hello_*.s、hello_*.objdump、hello_tail.i、hey.out）
+#   make check  检查代码是否符合 C99 标准
 #   make clean  删除生成的文件
 CC = gcc
 
@@ -31,7 +32,10 @@ book: hello.i hello.s hello.o hey
 	awk '/^\t\.ident/ { exit } !/cfi/ && !/^\t\.(file|size)/ { print }' hello.s > hello_main.s
 	objdump -d -r hello.o | sed -n '/<main>:/,$$p' > hello_main.objdump
 
+check:
+	$(CC) -std=c99 -pedantic-errors -Wall -Wextra -Werror -fsyntax-only hello.c hey.c
+
 clean:
 	rm -f hello.i hello.s hello.o hello hey
 
-.PHONY: all book clean
+.PHONY: all book check clean

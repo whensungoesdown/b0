@@ -4,7 +4,7 @@
 #   make book    重新生成书中引用的运行结果（out/*.txt）
 #   make clean   删除生成的文件
 CC     = gcc
-CFLAGS = -std=c11 -Wall -Wextra -Werror -g
+CFLAGS = -std=c99 -pedantic -Wall -Wextra -Werror -g
 PROGS  = var arith add even_odd grade leap countdown guess sum triangle first_square dragon
 
 all: $(PROGS)

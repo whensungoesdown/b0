@@ -1,0 +1,6 @@
+代码        main      0x555555555229
+只读数据    "hello"   0x555555556022
+数据        counter   0x555555558010
+BSS         table     0x555555558040
+堆          malloc    0x555555559010
+栈          local     0x7fffffffecc0

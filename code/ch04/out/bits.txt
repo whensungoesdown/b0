@@ -1,0 +1,8 @@
+$ gcc -m32 bits.c -o bits32
+$ ./bits32
+a 住在 0xbffffdf4
+一个地址占 4 个字节，也就是 32 位
+$ gcc bits.c -o bits64
+$ ./bits64
+a 住在 0x7fffffffecdc
+一个地址占 8 个字节，也就是 64 位

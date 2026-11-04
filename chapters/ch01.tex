@@ -8,6 +8,8 @@
 
 本章的示例在 \texttt{code/ch01/} 目录中，在 WSL 或 Linux 终端中运行 \texttt{make}，就能一步一步地重现本章的每一个文件。书中的输出来自 x86-64 上的 Ubuntu 和 GCC 15.2；换一个版本的编译器，细节会有所不同，但大体的样子是一样的。
 
+C 语言有好几个版本的国际标准，本书的代码都遵循其中的 \emph{C99}，也就是 1999 年发布的那一版，用任何一个常见的 C 编译器都能编译。
+
 \section{逐行读一遍}
 
 \paragraph{\texttt{\#include <stdio.h>}}
@@ -115,7 +117,7 @@ gcc hello.o -o hello           # 4. 链接
 
 预处理器处理所有以 \texttt{\#} 开头的行：把 \texttt{\#include} 的文件展开，把宏替换掉，去掉注释。它的输出仍然是 C 代码，只是不再有 \texttt{\#include}。
 
-打开 \texttt{hello.i}，它有八百多行。前面几乎全是从头文件里复制来的类型定义和函数声明，\texttt{printf} 和 \texttt{puts} 的声明也在其中；一共有十几个头文件被带了进来，因为 \texttt{stdio.h} 自己又包含了别的头文件。我们自己写的代码，被挤到了文件的最末尾：
+打开 \texttt{hello.i}，它有八百多行。前面几乎全是从头文件里复制来的类型定义和函数声明，\texttt{printf} 和 \texttt{puts} 的声明也在其中；一共有二十多个头文件被带了进来，因为 \texttt{stdio.h} 自己又包含了别的头文件。我们自己写的代码，被挤到了文件的最末尾：
 \codefile{code/ch01/hello_tail.i}{hello.i 的最后几行}{lst:hello-i}
 
 第一行 \texttt{\# 3 "hello.c"} 是预处理器留给编译器的记号，意思是“下面的代码来自 \texttt{hello.c} 的第 3 行”。编译器报错时，靠它找回原来的行号。

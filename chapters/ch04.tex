@@ -5,12 +5,19 @@
 
 这一章的前半部分讲内存：程序在内存里是什么样子，数据放在哪里，什么是栈，什么是堆，为什么用户程序碰不得操作系统内核。这些是计算机体系结构的基本概念，初学 C 的人不一定马上用得上；但心里有了这幅图，以后学指针、学操作系统、学 CPU，都会容易得多。后半部分讲指针——一个装着地址的变量。有了前面这幅图，指针就一点也不神秘了。
 
-本章的示例在 \texttt{code/ch04/} 目录中。运行 \texttt{make} 编译，\texttt{make test} 检查。程序会打印出变量的地址，这些地址每次运行都不一样（原因见第~\ref{sec:layout}~节），书中的结果是在关闭了地址随机化的情况下得到的。你那里看到的数，多半和书上不同，这很正常。
+本章的示例在 \texttt{code/ch04/} 目录中。运行 \texttt{make} 编译，\texttt{make test} 检查。为了让地址短一些、好读一些，大部分程序都编译成了 \emph{32 位}的程序。至于 32 位、64 位是什么意思，第~\ref{sec:bits}~节会讲。
+
+编译 32 位的程序，只要给 \texttt{gcc} 加上 \texttt{-m32}（需要先安装 \texttt{gcc-multilib}）：
+\begin{minted}[linenos=false]{text}
+gcc -m32 addr.c -o addr
+./addr
+\end{minted}
+我们的电脑上运行的其实是 64 位的 Linux。为了让书中的地址和在真正的 32 位 Linux 上一模一样，而且每次运行都相同，本章的 Makefile 和脚本在编译、运行时还多加了几个选项（写在 \texttt{code/ch04/Makefile} 的注释里，不用管它们）。所以你自己运行时，看到的地址多半和书上不同，这很正常。
 
 \section{内存：一排有门牌号的房子}
 \label{sec:mem-street}
 
-内存可以想象成一条很长很长的街，街边是一排一模一样的小房子。每座房子里只能住一个\emph{字节}（byte），也就是 8 个二进制位，能表示 0 到 255 之间的一个数。每座房子都有一个门牌号，这就是\emph{地址}。CPU 要读写内存，就得说出门牌号：“把 0x7fffffffe560 号房子里的东西拿给我。”
+内存可以想象成一条很长很长的街，街边是一排一模一样的小房子。每座房子里只能住一个\emph{字节}（byte），也就是 8 个二进制位，能表示 0 到 255 之间的一个数。每座房子都有一个门牌号，这就是\emph{地址}。CPU 要读写内存，就得说出门牌号：“把 0xbffffdf4 号房子里的东西拿给我。”
 
 在 C 语言里，变量名前面加上 \texttt{\&}，就能得到这个变量的地址：
 
@@ -25,35 +32,102 @@
   \item 地址是用\emph{十六进制}写的，前面的 \texttt{0x} 就是十六进制的标志。十六进制逢十六进一，用 \texttt{0}--\texttt{9} 和 \texttt{a}--\texttt{f} 这 16 个符号，\texttt{a} 是 10，\texttt{f} 是 15，\texttt{0x10} 是 16。地址很大，用十进制写太长，用十六进制正好：两个十六进制数字恰好是一个字节。
 \end{itemize}
 
-\texttt{a} 住在 \texttt{0x7fffffffe560}，\texttt{b} 住在 \texttt{0x7fffffffe564}，正好相差 4：\texttt{a} 占了 \texttt{...e560} 到 \texttt{...e563} 这 4 座房子，\texttt{b} 紧挨着住在后面（图~\ref{fig:houses}）。
+\texttt{a} 住在 \texttt{0xbffffdf4}，\texttt{b} 住在 \texttt{0xbffffdf8}，正好相差 4：\texttt{a} 占了 \texttt{0xbffffdf4} 到 \texttt{0xbffffdf7} 这 4 座房子，\texttt{b} 紧挨着住在后面（图~\ref{fig:houses}）。
 
 \begin{figure}[htbp]
   \centering
   \begin{tikzpicture}[line width=0.7pt]
-    \foreach \i/\v/\n in {0/03/60, 1/00/61, 2/00/62, 3/00/63, 4/04/64, 5/00/65, 6/00/66, 7/00/67} {
-      \pgfmathsetmacro\x{\i*1.3}
-      \filldraw[fill=yellow!15] (\x,0) rectangle +(1.05,0.9);
-      \filldraw[fill=red!45] (\x-0.1,0.9) -- +(0.625,0.5) -- +(1.25,0) -- cycle;
-      \filldraw[fill=brown!40] (\x+0.38,0) rectangle +(0.3,0.35);
-      \node[font=\ttfamily\small] at (\x+0.525,0.63) {\v};
-      \node[font=\ttfamily\scriptsize] at (\x+0.525,-0.25) {...e5\n};
+    \foreach \i/\v/\n in {0/03/f4, 1/00/f5, 2/00/f6, 3/00/f7, 4/04/f8, 5/00/f9, 6/00/fa, 7/00/fb} {
+      \pgfmathsetmacro\x{\i*1.45}
+      \filldraw[fill=yellow!15] (\x,0) rectangle +(1.15,0.9);
+      \filldraw[fill=red!45] (\x-0.1,0.9) -- +(0.675,0.5) -- +(1.35,0) -- cycle;
+      \filldraw[fill=brown!40] (\x+0.43,0) rectangle +(0.3,0.35);
+      \node[font=\ttfamily\small] at (\x+0.575,0.63) {\v};
+      \node[font=\ttfamily\tiny] at (\x+0.575,-0.22) {0xbffffd\n};
     }
     % 烟囱和炊烟
-    \filldraw[fill=gray!40] (0.75,1.15) rectangle (0.92,1.55);
+    \filldraw[fill=gray!40] (0.8,1.15) rectangle (0.97,1.55);
     \foreach \r/\dx/\dy in {0.08/0.05/0.12, 0.11/0.2/0.32, 0.14/0.42/0.58}
-      \draw[gray!70] (0.83+\dx,1.55+\dy) circle (\r);
+      \draw[gray!70] (0.88+\dx,1.55+\dy) circle (\r);
     \draw[decorate, decoration={brace, mirror, amplitude=6pt}]
-      (0,-0.5) -- (5.0,-0.5) node[midway, below=7pt] {\texttt{int a = 3}，占 4 个字节};
+      (0,-0.45) -- (5.5,-0.45) node[midway, below=7pt] {\texttt{int a = 3}，占 4 个字节};
     \draw[decorate, decoration={brace, mirror, amplitude=6pt}]
-      (5.2,-0.5) -- (10.15,-0.5) node[midway, below=7pt] {\texttt{int b = 4}，占 4 个字节};
-    \node[font=\small, anchor=west] at (10.4,0.6) {← 房子里住的字节};
-    \node[font=\small, anchor=west] at (10.4,-0.25) {← 门牌号（地址）};
+      (5.8,-0.45) -- (11.3,-0.45) node[midway, below=7pt] {\texttt{int b = 4}，占 4 个字节};
+    \node[font=\small, anchor=west] at (11.5,0.6) {← 字节};
+    \node[font=\small, anchor=west] at (11.5,-0.22) {← 地址};
   \end{tikzpicture}
   \caption{内存是一排有门牌号的房子，每座房子住一个字节}
   \label{fig:houses}
 \end{figure}
 
 仔细看图，3 这个数是怎样放进 4 个字节里的？它存成了 \texttt{03 00 00 00}：数值最低的那个字节，放在地址最小的房子里。这种存法叫\emph{小端}（little-endian）。x86 和 RISC-V 的处理器都是这样存数的。
+
+\section{地址有多长：16 位、32 位和 64 位}
+\label{sec:bits}
+
+门牌号能写多长，决定了这条街最多能有多少座房子。地址如果有 $n$ 个二进制位，就能编出 $2^n$ 个不同的门牌号，也就是能访问 $2^n$ 个字节的内存。人们常说的“32 位”“64 位”，在这里指的就是地址有多少位。
+
+同一个程序，可以编译成 32 位的，也可以编译成 64 位的：
+
+\codefile{code/ch04/bits.c}{一个地址有多大}{lst:bits}
+
+\inputminted[linenos=false]{text}{code/ch04/out/bits.txt}
+
+32 位程序里的地址占 4 个字节，写成十六进制是 8 位数；64 位程序里的地址占 8 个字节，打印出来长了一大截。本章用 32 位的地址做例子，就是因为它短，好读；至于道理，32 位和 64 位是完全一样的。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    \foreach \x/\plate/\label in {0/FFFF/16 位, 4.0/FFFFFFFF/32 位, 9.2/FFFFFFFFFFFFFFFF/64 位} {
+      \filldraw[fill=yellow!15] (\x,0) rectangle +(2.0,1.5);
+      \filldraw[fill=red!45] (\x-0.2,1.5) -- +(1.2,0.8) -- +(2.4,0) -- cycle;
+      \filldraw[fill=brown!40] (\x+0.75,0) rectangle +(0.5,0.7);
+      \node[draw, fill=blue!10, font=\ttfamily\small, inner sep=2pt] at (\x+1.0,1.12) {\plate};
+      \node at (\x+1.0,-0.4) {\label};
+    }
+    % 64 位的门牌太长，挂不下，房子急得冒汗
+    \fill[cyan!60] (11.55,2.05) ellipse (0.06 and 0.11);
+    \fill[cyan!60] (11.75,1.8) ellipse (0.05 and 0.09);
+    \draw[gray, line width=1pt] (-0.6,0) -- (12.0,0);
+  \end{tikzpicture}
+  \caption{门牌号越来越长}
+  \label{fig:plates-grow}
+\end{figure}
+
+为什么地址会从 16 位变成 32 位，又变成 64 位？简单地说：内存越来越大，门牌号不够用了（表~\ref{tab:bits}）。
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{地址的位数和能访问的内存}
+  \label{tab:bits}
+  \begin{tabular}{L{3.8cm}L{2.4cm}L{5.4cm}L{1.8cm}}
+    \toprule
+    地址位数 & 能访问的内存 & 代表性的处理器 & 年代 \\
+    \midrule
+    16 位 & 64\,KB & Intel 8080、MOS 6502（Apple II、红白机） & 1970 年代 \\
+    20 位（靠分段凑出来） & 1\,MB & Intel 8086（IBM PC） & 1978 年 \\
+    32 位 & 4\,GB & Intel 80386 & 1985 年 \\
+    64 位（目前实际用 48 位） & 256\,TB & AMD64（AMD Opteron） & 2003 年 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{16 位：64 KB 的小街。}
+早期的微处理器，比如 Intel 8080 和 MOS 6502（苹果公司的 Apple II 电脑、任天堂的红白机都用它），地址是 16 位的，$2^{16} = 65\,536$，最多只能访问 64\,KB 内存。这在 1970 年代已经很奢侈了，可是程序越写越大，很快就不够用了。
+
+1978 年，Intel 推出了 8086。它内部还是 16 位的，却想办法用 20 位的地址访问 1\,MB 内存：把内存分成一段一段的，地址由“段”和“段内的偏移”两部分组成，真正的地址是“段\,${}\times 16 +{}$\,偏移”。这就是\emph{分段}。分段能用，但很别扭：一个地址要用两个数来表示，同一个地方可以有好多种写法，程序员写 C 语言时还得区分“近指针”和“远指针”。IBM PC 用的就是 8086 家族的处理器，1\,MB 中还有一部分要留给显示器和 BIOS，留给程序的只有 640\,KB。“640\,KB 内存”是那个年代许多程序员共同的记忆。
+
+\paragraph{32 位：4 GB 的平坦大道。}
+1985 年，Intel 推出 80386，地址变成了 32 位，$2^{32}$ 字节就是 4\,GB。更重要的是，从此可以不再分段：从 \texttt{0x00000000} 到 \texttt{0xffffffff}，所有的地址排成一条笔直的长街，这叫\emph{平坦}（flat）的地址空间。80386 还在硬件上支持了\emph{分页}，让操作系统能给每个程序一个独立的、完整的 4\,GB 虚拟地址空间（第~\ref{sec:layout}~节最后会讲到）。1991 年，一个叫 Linus Torvalds 的芬兰大学生，就是在自己的 80386 电脑上开始写 Linux 的。前言里提到的 Linux 0.11，也是为 80386 写的。
+
+\paragraph{64 位：4 GB 也不够了。}
+4\,GB 在当时看来大得用不完，可是不到二十年，普通的电脑也装上了 4\,GB 内存。而且，一个 32 位程序能用的地址还到不了 4\,GB：32 位的 Linux 把其中 1\,GB 留给了操作系统内核（第~\ref{sec:kernel-space}~节），32 位的 Windows 默认只给程序 2\,GB。数据库、视频编辑、大型游戏，都被这道天花板压得喘不过气来。2003 年，AMD 推出了 64 位的 x86 处理器 AMD64，Intel 随后也跟进了。今天的电脑和手机，几乎都是 64 位的。
+
+$2^{64}$ 字节是 16\,EB（约 172 亿 GB），远远超出了现在任何一台电脑的需要。所以今天的 x86-64 处理器实际上只用 48 位地址，可以访问 256\,TB；比较新的处理器可以用到 57 位。上面的 \texttt{bits64} 打印出的地址 \texttt{0x7fffffffecdc} 是 12 位十六进制数，正好是 48 位。
+
+\paragraph{32 位并没有过时。}
+64 位的处理器也能运行 32 位的程序，所以我们才能用 \texttt{gcc -m32} 编译出 32 位的程序，在 64 位的 Linux 上运行。上面 \texttt{bits32} 打印出的 \texttt{0xbffffdf4}，就是一个典型的 32 位 Linux 程序里的栈地址。洗衣机、路由器、手环里的小芯片，至今大多还是 32 位的；RISC-V 也有 32 位（RV32）和 64 位（RV64）两种。地址短一些，芯片就简单一些。对于从头开始造一颗 CPU 来说，32 位正是一个好的起点。
 
 \section{程序住在内存的哪里}
 \label{sec:layout}
@@ -70,7 +144,7 @@
 
 把两边对照一下，就能画出程序在内存里的样子（图~\ref{fig:layout}）。它像一栋楼：地址从下往上越来越大，不同的东西住在不同的楼层。
 
-\begin{figure}[htbp]
+\begin{figure}[!htb]
   \centering
   \begin{tikzpicture}[
       floor/.style={draw, minimum width=46mm, anchor=south west, inner sep=0pt},
@@ -89,54 +163,40 @@
     \node[font=\small, gray] at (2.3,4.0) {（大片空地）};
     \node[floor, minimum height=5mm, fill=violet!12] at (0,4.4)  {共享库（libc 等）};
     \node[floor, minimum height=8mm, fill=red!18]    at (0,5.3)  {栈 \quad $\downarrow$};
-    % 铁丝网
-    \draw[gray!70!black, line width=1.2pt]
-      (0,6.25) \foreach \k in {1,...,23} { -- ++(0.1,{mod(\k,2) ? 0.12 : -0.12}) };
-    \foreach \k in {0.3,1.1,1.9,2.7,3.5,4.3}
-      \draw[gray!70!black, line width=1pt] (\k,6.15) -- ++(0.12,0.2) (\k+0.12,6.15) -- ++(-0.12,0.2);
-    \node[floor, minimum height=14mm, fill=gray!45] at (0,6.45) {};
-    \node[font=\bfseries] at (1.6,7.45) {内核空间};
-    % 告示牌
-    \node[draw, fill=yellow!60, font=\scriptsize\bfseries, rotate=-6] at (1.6,6.95) {闲人免进};
-    % 门卫
-    \draw (3.85,7.45) circle (0.13);
-    \fill[blue!60!black] (3.7,7.55) rectangle (4.0,7.62);
-    \fill[blue!60!black] (3.75,7.62) rectangle (3.95,7.7);
-    \draw (3.85,7.32) -- (3.85,6.95);
-    \draw (3.85,6.95) -- (3.72,6.6) (3.85,6.95) -- (3.98,6.6);
-    \draw (3.85,7.22) -- (3.6,7.42);
-    \draw (3.85,7.22) -- (4.1,7.05);
+    \node[floor, minimum height=9mm, fill=gray!45]   at (0,6.1)  {\bfseries 内核空间（1\,GB）};
     % 屋顶
-    \filldraw[fill=red!40] (-0.2,7.85) -- (2.3,8.6) -- (4.8,7.85) -- cycle;
+    \filldraw[fill=red!40] (-0.2,7.0) -- (2.3,7.75) -- (4.8,7.0) -- cycle;
     % 左边：地址
-    \node[addr] at (-0.15,0.05) {0};
-    \node[addr] at (-0.15,0.8)  {0x555555555229};
-    \node[addr] at (-0.15,1.4)  {0x555555556020};
-    \node[addr] at (-0.15,2.0)  {0x555555558010};
-    \node[addr] at (-0.15,2.6)  {0x555555558040};
-    \node[addr] at (-0.15,3.3)  {0x555555559010};
-    \node[addr] at (-0.15,5.7)  {0x7fffffffe550};
-    \node[addr] at (-0.15,6.5)  {0xffff800000000000};
-    \node[addr] at (-0.15,7.8)  {0xffffffffffffffff};
+    \node[addr] at (-0.15,0.05) {0x00000000};
+    \node[addr] at (-0.15,0.8)  {0x080491d6};
+    \node[addr] at (-0.15,1.4)  {0x0804a026};
+    \node[addr] at (-0.15,2.0)  {0x0804c02c};
+    \node[addr] at (-0.15,2.6)  {0x0804c060};
+    \node[addr] at (-0.15,3.3)  {0x0804d010};
+    \node[addr] at (-0.15,4.65) {0xb7d6b000};
+    \node[addr] at (-0.15,5.55) {0xbffffdec};
+    \node[addr] at (-0.15,6.15) {0xc0000000};
+    \node[addr] at (-0.15,7.0)  {0xffffffff};
     % 右边：住户和权限
     \node[what] at (4.75,0.8) {\texttt{main} \quad \texttt{r-x}};
     \node[what] at (4.75,1.4) {\texttt{"hello"} \quad \texttt{r--}};
     \node[what] at (4.75,2.0) {\texttt{counter} \quad \texttt{rw-}};
     \node[what] at (4.75,2.6) {\texttt{table} \quad \texttt{rw-}};
     \node[what] at (4.75,3.3) {\texttt{malloc} 借来的内存，往上长};
-    \node[what] at (4.75,5.7) {局部变量 \texttt{local}，往下长};
-    \node[what] at (4.75,7.15) {操作系统自己用，用户程序碰不得};
+    \node[what] at (4.75,4.65) {C 标准库等};
+    \node[what] at (4.75,5.55) {局部变量 \texttt{local}，往下长};
+    \node[what] at (4.75,6.55) {操作系统，用户程序碰不得};
     % 高低地址
-    \draw[-{Stealth}, thick] (-3.3,0) -- (-3.3,7.8) node[above] {高地址};
-    \node[below] at (-3.3,0) {低地址};
+    \draw[-{Stealth}, thick] (-2.7,0) -- (-2.7,7.0) node[above] {高地址};
+    \node[below] at (-2.7,0) {低地址};
   \end{tikzpicture}
-  \caption{一个程序的内存布局（x86-64 Linux，地址来自代码~\ref{lst:layout} 的运行结果；楼层的高度不按比例）}
+  \caption{一个 32 位程序的内存布局（地址来自代码~\ref{lst:layout} 的运行结果；楼层的高度不按比例）}
   \label{fig:layout}
 \end{figure}
 
 从下往上，各层住的是（表~\ref{tab:segments}）：
 
-\begin{table}[htbp]
+\begin{table}[!htb]
   \centering
   \small
   \caption{程序的各个部分}
@@ -160,13 +220,62 @@
 楼的最底下，地址 0 附近，是一片“不能访问”的区域，不属于任何一段。后面会看到，这对发现程序的错误很有用。
 
 \paragraph{地址为什么每次都不一样？}
-如果你直接运行 \texttt{./layout}，再运行一次，会发现地址变了。这是操作系统故意的：每次运行，都把各段放到随机的位置上。这叫\emph{地址空间布局随机化}（ASLR），坏人想攻击一个程序，往往要先知道某样东西的地址；地址每次都变，攻击就难得多。为了让书中的结果每次都一样，我们用下面的命令关掉了随机化：
-\begin{minted}[linenos=false]{text}
-setarch $(uname -m) -R ./layout
-\end{minted}
+如果你直接运行 \texttt{./layout}，再运行一次，会发现地址变了。这是操作系统故意的：每次运行，都把各段放到随机的位置上。这叫\emph{地址空间布局随机化}（ASLR），坏人想攻击一个程序，往往要先知道某样东西的地址；地址每次都变，攻击就难得多。书中的结果是在关掉了随机化的情况下得到的，所以每次都一样。
+
+关掉随机化以后，32 位程序的布局就是 32 位 Linux 的经典样子：程序的代码从 \texttt{0x08048000} 开始，C 标准库这些共享库住在 \texttt{0xb7......} 一带，栈的顶端紧挨着 \texttt{0xc0000000}（内存地图中 \texttt{[stack]} 那一行正好到 \texttt{c0000000} 为止）。再往上的 1\,GB，就是内核的地盘了。许多讲 32 位 Linux 的书和文章里，都能看到这几个数。
 
 \paragraph{两个程序，同一个地址？}
 如果同时运行两个程序，它们打印出的地址可能一模一样。难道两个程序住在同一个地方？不是的。每个程序都以为自己独占了一整栋楼，它看到的地址，其实是\emph{虚拟地址}。CPU 和操作系统一起，在背后把每个程序的虚拟地址，悄悄地对应到真正的内存（\emph{物理地址}）上，各住各的，互不干扰。这就是\emph{虚拟内存}。它是怎样做到的，等我们自己造 CPU 时再细讲。
+
+\subsection{64 位的程序：参考}
+\label{sec:layout64}
+
+把同一个 \texttt{layout.c} 按今天的默认方式编译成 64 位的程序（\texttt{gcc layout.c -o layout64}，即 \texttt{code/ch04/} 中的 \texttt{layout64}），运行结果是：
+\inputminted[linenos=false]{text}{code/ch04/out/layout64.txt}
+
+楼层的顺序和 32 位的完全一样，楼顶上同样住着操作系统内核，只是门牌号长了许多，楼也高了许多（图~\ref{fig:layout64}）。今后你在自己的电脑上看到的，多半是这种 64 位的地址；看到它们时，想一想这张图就行了，不必记住这些数。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      floor/.style={draw, minimum width=46mm, anchor=south west, inner sep=0pt, font=\small},
+      addr/.style={font=\ttfamily\scriptsize, anchor=east},
+      line width=0.7pt,
+    ]
+    \node[floor, minimum height=4mm, fill=gray!25]   at (0,0)    {不能访问};
+    \node[floor, minimum height=4mm, fill=blue!18]   at (0,0.4)  {代码};
+    \node[floor, minimum height=4mm, fill=blue!8]    at (0,0.8)  {只读数据};
+    \node[floor, minimum height=4mm, fill=green!18]  at (0,1.2)  {数据、BSS};
+    \node[floor, minimum height=5mm, fill=orange!25] at (0,1.6)  {堆 \quad $\uparrow$};
+    \draw[dashed] (0,2.1) rectangle (4.6,3.1);
+    \node[font=\small, gray] at (2.3,2.6) {（大片空地）};
+    \node[floor, minimum height=5mm, fill=red!18]    at (0,3.1)  {栈 \quad $\downarrow$};
+    % 铁丝网
+    \draw[gray!70!black, line width=1.2pt]
+      (0,3.8) \foreach \k in {1,...,23} { -- ++(0.1,{mod(\k,2) ? 0.12 : -0.12}) };
+    \foreach \k in {0.3,1.1,1.9,2.7,3.5,4.3}
+      \draw[gray!70!black, line width=1pt] (\k,3.7) -- ++(0.12,0.2) (\k+0.12,3.7) -- ++(-0.12,0.2);
+    \node[floor, minimum height=10mm, fill=gray!45] at (0,4.0) {};
+    \node[font=\bfseries] at (1.6,4.65) {内核空间};
+    \node[draw, fill=yellow!60, font=\scriptsize\bfseries, rotate=-6] at (1.6,4.2) {闲人免进};
+    % 门卫
+    \draw (3.85,4.7) circle (0.12);
+    \fill[blue!60!black] (3.7,4.8) rectangle (4.0,4.86);
+    \fill[blue!60!black] (3.75,4.86) rectangle (3.95,4.94);
+    \draw (3.85,4.58) -- (3.85,4.3);
+    \draw (3.85,4.3) -- (3.74,4.05) (3.85,4.3) -- (3.96,4.05);
+    \draw (3.85,4.5) -- (3.62,4.65);
+    \draw (3.85,4.5) -- (4.08,4.35);
+    \filldraw[fill=red!40] (-0.2,5.0) -- (2.3,5.6) -- (4.8,5.0) -- cycle;
+    \node[addr] at (-0.15,0.55) {0x555555555229};
+    \node[addr] at (-0.15,1.8)  {0x555555559010};
+    \node[addr] at (-0.15,3.35) {0x7fffffffecc0};
+    \node[addr] at (-0.15,4.05) {0xffff800000000000};
+    \node[addr] at (-0.15,5.0)  {0xffffffffffffffff};
+  \end{tikzpicture}
+  \caption{64 位程序的内存布局（参考；楼层的高度不按比例）}
+  \label{fig:layout64}
+\end{figure}
 
 \section{栈：倒着摞的盘子}
 \label{sec:stack}
@@ -203,15 +312,15 @@ setarch $(uname -m) -R ./layout
     \draw (-2.6,0.15) -- (2.6,0.15);
     \foreach \x in {-2.4,-2.0,...,2.4} \draw[brown!60] (\x,0.45) -- ++(0.25,-0.3);
     % 倒着摞的盘子
-    \foreach \i/\n/\a in {0/main/e564, 1/first/e544, 2/second/e524, 3/third/e504} {
+    \foreach \i/\n/\a in {0/main/fdf8, 1/first/fdd8, 2/second/fdb8, 3/third/fd98} {
       \pgfmathsetmacro\y{-0.35-\i*0.62}
       \filldraw[fill=white]  (0,\y) ellipse (1.7 and 0.3);
       \filldraw[fill=cyan!8] (0,\y) ellipse (1.15 and 0.19);
       \node[font=\ttfamily\small] at (0,\y) {\n};
-      \node[font=\ttfamily\scriptsize, anchor=west] at (2.0,\y) {...\a};
+      \node[font=\ttfamily\scriptsize, anchor=west] at (2.0,\y) {0xbfff\a};
     }
     \node[font=\small, anchor=west] at (2.0,0.6) {地址};
-    % 往下仰望的小人
+    % 往上仰望的小人
     \draw (-0.2,-3.35) circle (0.17);
     \draw (-0.2,-3.52) -- (-0.2,-4.05);
     \draw (-0.2,-4.05) -- (-0.38,-4.50) (-0.2,-4.05) -- (-0.02,-4.50);
@@ -281,30 +390,82 @@ setarch $(uname -m) -R ./layout
 \section{用户空间和内核空间}
 \label{sec:kernel-space}
 
-再看一眼图~\ref{fig:layout}：楼的最上面几层，是操作系统\emph{内核}的地盘，中间还隔着一道铁丝网。在 x86-64 的 Linux 上，64 位的地址被一分为二（表~\ref{tab:split}）。
+操作系统的\emph{内核}也要住在内存里。内核管着整台计算机：内存怎么分，哪个程序先运行，文件怎么存，键盘和屏幕怎么用，都是它说了算。要是随便哪个程序都能改内核的数据，一个出错的程序（或者一个坏人写的程序）就能让整个系统瘫痪。所以，内核住的地方必须保护起来。
+
+\subsection{32 位的划分：3 GB 和 1 GB}
+
+在 32 位的 Linux 上，每个程序的 4\,GB 地址空间被分成两块（图~\ref{fig:split32}）：下面的 3\,GB，从 \texttt{0x00000000} 到 \texttt{0xbfffffff}，是\emph{用户空间}，住着我们自己的程序；上面的 1\,GB，从 \texttt{0xc0000000} 到 \texttt{0xffffffff}，是\emph{内核空间}，住着内核的代码和数据。每个程序的楼顶上，住的都是同一个内核。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      floor/.style={draw, minimum width=50mm, anchor=south west, inner sep=0pt},
+      addr/.style={font=\ttfamily\scriptsize, anchor=east},
+      line width=0.7pt,
+    ]
+    % 用户空间
+    \node[floor, minimum height=36mm, fill=green!10] at (0,0) {};
+    \node[font=\bfseries] at (2.5,2.1) {用户空间};
+    \node[font=\small] at (2.5,1.5) {3\,GB：我们自己的程序};
+    % 铁丝网
+    \draw[gray!70!black, line width=1.2pt]
+      (0,3.7) \foreach \k in {1,...,25} { -- ++(0.1,{mod(\k,2) ? 0.12 : -0.12}) };
+    \foreach \k in {0.3,1.1,1.9,2.7,3.5,4.3}
+      \draw[gray!70!black, line width=1pt] (\k,3.6) -- ++(0.12,0.2) (\k+0.12,3.6) -- ++(-0.12,0.2);
+    % 内核空间
+    \node[floor, minimum height=15mm, fill=gray!45] at (0,3.9) {};
+    \node[font=\bfseries] at (1.5,4.95) {内核空间};
+    \node[font=\small] at (1.5,4.4) {1\,GB：操作系统};
+    \node[draw, fill=yellow!60, font=\scriptsize\bfseries, rotate=-6] at (3.35,4.8) {闲人免进};
+    % 门卫
+    \draw (4.45,4.85) circle (0.14);
+    \fill[blue!60!black] (4.28,4.97) rectangle (4.62,5.04);
+    \fill[blue!60!black] (4.34,5.04) rectangle (4.56,5.13);
+    \draw (4.45,4.71) -- (4.45,4.35);
+    \draw (4.45,4.35) -- (4.32,4.02) (4.45,4.35) -- (4.58,4.02);
+    \draw (4.45,4.62) -- (4.2,4.8);
+    \draw (4.45,4.62) -- (4.7,4.45);
+    % 地址
+    \node[addr] at (-0.15,0.05) {0x00000000};
+    \node[addr] at (-0.15,3.55) {0xbfffffff};
+    \node[addr] at (-0.15,4.0)  {0xc0000000};
+    \node[addr] at (-0.15,5.35) {0xffffffff};
+  \end{tikzpicture}
+  \caption{32 位 Linux 的经典划分}
+  \label{fig:split32}
+\end{figure}
+
+这正是图~\ref{fig:layout} 中看到的：栈住在 \texttt{0xbffffdec}，就在 \texttt{0xc0000000} 下面不远的地方，再往上就进了内核空间。
+
+\paragraph{在你的电脑上，栈可能住得更高。}
+我们的电脑上运行的其实是 64 位的 Linux，它的内核住在 64 位地址空间的顶上，根本不在 32 位程序这 4\,GB 里面。所以在 64 位的 Linux 上，32 位的程序默认可以用满整整 4\,GB，栈会住到 \texttt{0xffff....} 附近。书中运行 32 位程序时，特意让它和在真正的 32 位 Linux 上一样，只用下面 3\,GB。
+
+\subsection{64 位的划分}
+
+64 位的 Linux 也是这样一分为二，只是地址大得多（表~\ref{tab:split}）。中间那一大段地址不能用，正是因为 x86-64 处理器只用了 48 位地址（第~\ref{sec:bits}~节）。
 
 \begin{table}[htbp]
   \centering
-  \caption{x86-64 Linux 的地址划分（使用 4 级页表时）}
+  \caption{x86-64 Linux 的地址划分（48 位地址）}
   \label{tab:split}
   \begin{tabular}{lll}
     \toprule
     地址范围 & 归谁 & 大小 \\
     \midrule
-    \texttt{0x0000000000000000}--\texttt{0x00007fffffffffff} & 用户空间：普通程序 & 128\,TB \\
+    \texttt{0x0000000000000000}--\texttt{0x00007fffffffffff} & 用户空间 & 128\,TB \\
     \texttt{0x0000800000000000}--\texttt{0xffff7fffffffffff} & 不能使用 & \\
-    \texttt{0xffff800000000000}--\texttt{0xffffffffffffffff} & 内核空间：操作系统 & 128\,TB \\
+    \texttt{0xffff800000000000}--\texttt{0xffffffffffffffff} & 内核空间 & 128\,TB \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-我们写的程序，住在下半部分的\emph{用户空间}；上半部分的\emph{内核空间}，住着操作系统内核的代码和数据。内核管着整台计算机：内存怎么分，哪个程序先运行，文件怎么存，键盘和屏幕怎么用，都是它说了算。要是随便哪个程序都能改内核的数据，一个出错的程序（或者一个坏人写的程序）就能让整个系统瘫痪。所以，内核空间必须保护起来。
+\subsection{CPU 守着这道门}
 
 保护是靠 CPU 的硬件完成的。CPU 有两种工作状态：运行内核代码时处于\emph{内核态}，运行普通程序时处于\emph{用户态}（x86 把它们叫做 ring 0 和 ring 3，RISC-V 叫做 S 模式和 U 模式）。内核的每一页内存都标着“只有内核态才能访问”。CPU 每访问一次内存都会检查：如果它正处于用户态，却要访问内核的内存，就立刻拒绝，并通知内核来处理。内核的处理办法很简单：把这个程序结束掉。
 
-不信就试试：
+不信就试试。前面说过，在我们 64 位的 Linux 上，内核并不在 32 位程序的那 4\,GB 里，所以这个例子要编译成 64 位的程序（\texttt{Makefile} 中编译 \texttt{kernel} 时没有加 \texttt{-m32}），往 64 位内核空间里的一个地址写数。\texttt{0xffffffff81000000} 是 x86-64 Linux 内核代码通常所在的位置：
 
-\codefile{code/ch04/kernel.c}{往内核空间里写数}{lst:kernel}
+\codefile{code/ch04/kernel.c}{往内核空间里写数（64 位）}{lst:kernel}
 
 \inputminted[linenos=false]{text}{code/ch04/out/kernel.txt}
 
@@ -345,7 +506,7 @@ setarch $(uname -m) -R ./layout
   \label{fig:guard}
 \end{figure}
 
-那么，用户程序要用屏幕、读文件，又不能碰内核的东西，该怎么办？答案是：去“窗口”办理。就像在银行，你不能自己走进金库去拿钱，只能在柜台的窗口递上一张单子，由工作人员替你去取。这个窗口就是\emph{系统调用}。还记得第~\ref{sec:runtime}~节吗？\texttt{puts} 最后正是通过 \texttt{write} 系统调用，请内核把字送到屏幕上的。CPU 有专门的指令来做这件事（x86-64 是 \texttt{syscall}，RISC-V 是 \texttt{ecall}）：执行它时，CPU 从用户态切换到内核态，跳到内核事先指定好的入口；内核办完事，再切换回用户态，回到程序中继续执行。
+那么，用户程序要用屏幕、读文件，又不能碰内核的东西，该怎么办？答案是：去“窗口”办理。就像在银行，你不能自己走进金库去拿钱，只能在柜台的窗口递上一张单子，由工作人员替你去取。这个窗口就是\emph{系统调用}。还记得第~\ref{sec:runtime}~节吗？\texttt{puts} 最后正是通过 \texttt{write} 系统调用，请内核把字送到屏幕上的。CPU 有专门的指令来做这件事（x86 是 \texttt{int 0x80} 或 \texttt{syscall}，RISC-V 是 \texttt{ecall}）：执行它时，CPU 从用户态切换到内核态，跳到内核事先指定好的入口；内核办完事，再切换回用户态，回到程序中继续执行。
 
 用户态和内核态、内存的权限检查、虚拟地址到物理地址的转换——这些都是 CPU 在硬件上实现的。等我们自己造 CPU 时，它们都是要亲手做出来的东西。
 
@@ -354,7 +515,7 @@ setarch $(uname -m) -R ./layout
 
 现在可以讲指针了。
 
-\emph{指针}也是一个变量，只不过它装的不是普通的数，而是一个地址——就像一张纸条，上面写着某座房子的门牌号。
+\emph{指针}也是一个变量，只不过它装的不是普通的数，而是一个地址——就像一张纸条，上面写着某座房子的门牌号。在 32 位的程序里，一个地址占 4 个字节，所以一个指针也占 4 个字节；在 64 位的程序里，指针占 8 个字节（代码~\ref{lst:bits}）。
 
 “指针”的英文是 pointer。在英语里，pointer 还是一种猎犬的名字（中文叫指示犬）：它发现猎物时会停下来，抬起一只前爪，用鼻子直直地指着猎物所在的方向（图~\ref{fig:dog}）。C 语言里的指针做的也是这件事：它自己不是那个东西，但它告诉你那个东西在哪里。
 
@@ -383,14 +544,14 @@ setarch $(uname -m) -R ./layout
     % 项圈和名牌
     \draw[red!70!black, line width=2pt] (1.0,0.62) -- (1.3,0.45);
     \draw (1.15,0.55) -- (0.75,1.0);
-    \node[draw, fill=yellow!40, font=\ttfamily\scriptsize, inner sep=2pt, anchor=east] at (0.9,1.1) {p = 0x7fffffffe55c};
+    \node[draw, fill=yellow!40, font=\ttfamily\scriptsize, inner sep=2pt, anchor=east] at (0.9,1.1) {p = 0xbffffdf4};
     % 指向
     \draw[dashed, -{Stealth}, red!70!black] (2.15,0.77) -- (3.85,0.77);
     % 盒子 a
     \filldraw[fill=brown!30] (3.95,0.3) rectangle (5.15,1.25);
     \node[font=\huge\bfseries] at (4.55,0.78) {3};
     \node[draw, fill=yellow!40, font=\ttfamily, rotate=6, inner sep=2pt] at (4.55,0.0) {a};
-    \node[font=\ttfamily\scriptsize] at (4.55,-0.45) {住在 0x7fffffffe55c};
+    \node[font=\ttfamily\scriptsize] at (4.55,-0.45) {住在 0xbffffdf4};
     \draw[gray, line width=1pt] (-2.1,-1.05) -- (5.5,-1.05);
   \end{tikzpicture}
   \caption{指针（pointer）就像一只指示犬：它自己不是猎物，但它指着猎物在哪里}
@@ -500,7 +661,7 @@ int *p = (int *)0xffffffff81000000;
   \item 用完以后，\texttt{free(scores)} 把内存还回去。注意中途出错提前返回时，也要先 \texttt{free}。
 \end{itemize}
 
-仔细看打印出来的地址：每往后一个，地址加 4，而不是加 1。这是因为 \texttt{scores} 是指向 \texttt{int} 的指针，C 语言知道一个 \texttt{int} 占 4 个字节，所以“指针加一”的意思是“走到下一个 \texttt{int}”，地址实际加的是 4。如果是指向 \texttt{char}（占 1 个字节）的指针，加一就真的是地址加 1。
+仔细看打印出来的地址：\texttt{0x804d830}、\texttt{0x804d834}、\texttt{0x804d838}，每往后一个，地址加 4，而不是加 1。这是因为 \texttt{scores} 是指向 \texttt{int} 的指针，C 语言知道一个 \texttt{int} 占 4 个字节，所以“指针加一”的意思是“走到下一个 \texttt{int}”，地址实际加的是 4。如果是指向 \texttt{char}（占 1 个字节）的指针，加一就真的是地址加 1。
 
 \texttt{*(scores + i)} 也可以写成 \texttt{scores[i]}，两种写法完全一样。后一种写法叫\emph{数组}，以后会经常用到。
 
@@ -525,10 +686,11 @@ volatile unsigned char *uart = (volatile unsigned char *)0x10000000;
 
 \begin{itemize}
   \item 内存是一排有门牌号的格子，每个格子一个字节，门牌号就是地址。\texttt{\&a} 是 \texttt{a} 的地址，用 \texttt{\%p} 打印。x86 和 RISC-V 都是小端存储。
-  \item 程序在内存里分成代码、只读数据、数据、BSS、堆、栈几部分，各有各的读、写、执行权限，由 CPU 在硬件上检查。
+  \item 地址有 $n$ 位，就能访问 $2^n$ 个字节。内存越来越大，地址从 16 位（64\,KB）变成 32 位（4\,GB），又变成 64 位。32 位的地址写成十六进制是 8 位数，本章的例子都用它。
+  \item 程序在内存里分成代码、只读数据、数据、BSS、堆、栈几部分，各有各的读、写、执行权限，由 CPU 在硬件上检查。64 位程序的布局和 32 位一样，只是地址更长。
   \item 栈存放函数的局部变量，每调用一个函数加一个栈帧，函数返回就收回。栈从高地址往低地址长，大小有限。
   \item 堆上的内存用 \texttt{malloc} 借、用 \texttt{free} 还，忘了还就是内存泄漏。
-  \item 地址空间分为用户空间和内核空间。CPU 在用户态访问内核空间会被拒绝，程序得到段错误。用户程序通过系统调用请内核办事。
+  \item 地址空间分为用户空间和内核空间。32 位 Linux 中用户 3\,GB、内核 1\,GB。CPU 在用户态访问内核空间会被拒绝，程序得到段错误。用户程序通过系统调用请内核办事。
   \item 指针是装着地址的变量：\texttt{p = \&a} 让 \texttt{p} 指向 \texttt{a}，\texttt{*p} 就是 \texttt{a}。函数要改调用者的变量，就要拿到它的地址，这就是 \texttt{scanf} 要写 \texttt{\&} 的原因。
   \item 指针加一，走到下一个元素，地址加的是元素的大小。
   \item 在没有操作系统的机器上，往设备的地址写数据，就能控制设备。
@@ -538,7 +700,8 @@ volatile unsigned char *uart = (volatile unsigned char *)0x10000000;
 
 \begin{enumerate}
   \item 在代码~\ref{lst:addr} 中再加一个 \texttt{char} 型的变量，打印它的地址和 \texttt{sizeof(char)}。
-  \item 不加 \texttt{setarch}，把 \texttt{layout} 连续运行三次，看看哪些地址变了。再加上 \texttt{setarch \$(uname -m) -R} 运行三次，比较一下。
+  \item 一个 16 位的地址，写成十六进制有几位？20 位的地址能访问多少字节的内存？
+  \item 把 \texttt{layout.c} 分别编译成 32 位和 64 位的程序（\texttt{gcc -m32 layout.c -o layout32} 和 \texttt{gcc layout.c -o layout64}），各运行几次。哪些地址每次都变？两种程序的地址有什么不同？32 位程序的栈住在哪里？
   \item 写一个函数 \texttt{void add\_one(int *p)}，把 \texttt{p} 指向的那个数加 1。在 \texttt{main} 中调用它，验证变量真的变了。
   \item 修改代码~\ref{lst:heap}，再打印出最高分。
   \item 想一想：如果一个函数把自己的局部变量的地址交回给调用者，调用者再通过这个地址去读，会出什么问题？
