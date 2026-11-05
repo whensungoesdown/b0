@@ -74,14 +74,19 @@
 \usepackage[hidelinks, unicode]{hyperref}
 
 % ---------- 书籍信息 ----------
-\title{书名}
-\author{作者}
+\title{教孩子学编程（C Language: A Lazy Approach）}
+\author{whensungoesdown}
 \date{\today}
+\hypersetup{pdftitle={教孩子学编程（C Language: A Lazy Approach）}, pdfauthor={whensungoesdown}}
 
 \begin{document}
 
 \frontmatter
-\maketitle
+% 封面：内容在 frontmatter/cover.tex，书名、作者也在那里改
+\begin{titlepage}
+  \input{frontmatter/cover}
+\end{titlepage}
+\thispagestyle{empty}\null\clearpage   % 封面的背面：空白页，不印页码
 \include{frontmatter/preface}
 \tableofcontents
 \listoflistings

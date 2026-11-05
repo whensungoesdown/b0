@@ -50,3 +50,6 @@ code/ch05/greet.o
 code/ch05/libgreet.a
 code/ch05/diary.txt
 code/ch05/*.exe
+/cover.aux
+/cover.log
+/cover.pdf

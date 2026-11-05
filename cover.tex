@@ -1,0 +1,15 @@
+% 单独生成封面 cover.pdf，用于打印或上传封面：xelatex cover.tex（要运行两遍）
+% 封面的内容在 frontmatter/cover.tex 里，书的第一页用的也是它。
+\documentclass{article}
+\usepackage[a4paper, margin=0pt]{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usepackage{graphicx}
+\setCJKmainfont{FandolSong-Regular}[Extension=.otf]
+\pagestyle{empty}
+
+\begin{document}
+\noindent\input{frontmatter/cover}
+\end{document}
