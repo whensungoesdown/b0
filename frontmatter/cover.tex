@@ -1,15 +1,15 @@
 % 封面。main.tex 用 \input 把它放在第一页；根目录的 cover.tex 也用它单独生成 cover.pdf。
 % 版式仿照《Computer Architecture: A Quantitative Approach》第 6 版：
 %   上半部白底，作者名一行，下面是大号细衬线的英文书名和中文书名，都靠右对齐；
-%   中间一条深红色的横带写副标题，压在照片的上沿；
-%   下半部是一张黑白照片（figures/cover_gray.png），一直铺到页面底边；
+%   中间一条深红色的横带写副标题，压在图片的上沿；
+%   下半部是一张猫狗大战的图（figures/catdog.png，裁掉了底部的水印和按钮），
+%   铺满页面的宽度，一直到底边；
 %   右上角竖着一个红色的小标签，左下角是“出版社”的标志。
-% 黑白照片由 tools/png_gray.py 从 figures/cover.png 生成。
 
 % 书名、作者都在这里改
 \providecommand{\CoverEnTitle}{C LANGUAGE}
 \providecommand{\CoverEnSubtitle}{A Lazy Approach}
-\providecommand{\CoverZhTitle}{教孩子学编程}
+\providecommand{\CoverZhTitle}{教猫狗学编程}
 \providecommand{\CoverAuthor}{whensungoesdown}
 \providecommand{\CoverEdition}{First Edition}
 
@@ -23,18 +23,20 @@
 \begin{tikzpicture}[remember picture, overlay, every node/.style={inner sep=0pt}]
   \coordinate (TR) at (current page.north east);
 
-  % ---- 下半部：黑白照片，从横带的上沿一直铺到页面底边（页面顶端往下 150 mm 处开始）----
+  % ---- 下半部：猫狗大战，铺满页面的宽度，贴着底边 ----
+  % 原图 1204×772 像素；trim 裁掉底部 112 像素（百度百科的水印和 START 按钮），
+  % 剩下的 1204×660 按页面宽度 210 mm 缩放，高约 115 mm，正好接到横带的下沿
   \begin{scope}
-    \clip ($(current page.north west) + (0,-150mm)$) rectangle (current page.south east);
+    \clip ($(current page.north west) + (0,-182mm)$) rectangle (current page.south east);
     \node[anchor=south] at (current page.south)
-      {\includegraphics[height=160mm]{figures/cover_gray.png}};
+      {\includegraphics[trim=0 112 0 0, clip, width=\paperwidth]{figures/catdog.png}};
   \end{scope}
 
-  % ---- 中间：深红色的横带（页面顶端往下 150--168 mm），写英文副标题 ----
-  \shade[left color=coverred!85!black, right color=coverred, opacity=0.94]
-    ($(current page.north west) + (0,-150mm)$) rectangle ($(TR) + (0,-168mm)$);
+  % ---- 中间：深红色的横带（页面顶端往下 164--182 mm），写英文副标题 ----
+  \shade[left color=coverred!85!black, right color=coverred]
+    ($(current page.north west) + (0,-164mm)$) rectangle ($(TR) + (0,-182mm)$);
   \node[anchor=east, text=white, font=\coverfont\fontsize{27}{32}\selectfont]
-    at ($(TR) + (-24mm,-159mm)$) {\CoverEnSubtitle};
+    at ($(TR) + (-24mm,-173mm)$) {\CoverEnSubtitle};
 
   % ---- 右上角：竖着的红色小标签 ----
   \fill[coverred] ($(TR) + (-27mm,-18mm)$) rectangle ++(12mm,-36mm);
@@ -43,12 +45,12 @@
 
   % ---- 上半部：作者名，下面是英文书名和中文书名，都靠右 ----
   \node[anchor=east, text=covergray, font=\coverfont\fontsize{16}{19}\selectfont]
-    at ($(TR) + (-24mm,-74mm)$) {\CoverAuthor};
+    at ($(TR) + (-24mm,-86mm)$) {\CoverAuthor};
   \node[anchor=north east, text=black!78,
         font=\coverfont\fontsize{62}{62}\selectfont\addfontfeature{LetterSpace=3}]
-    at ($(TR) + (-21mm,-82mm)$) {\CoverEnTitle};
+    at ($(TR) + (-21mm,-94mm)$) {\CoverEnTitle};
   \node[anchor=north east, text=black!78, font=\CJKfamily{coverkai}\fontsize{44}{48}\selectfont]
-    at ($(TR) + (-24mm,-112mm)$) {\CoverZhTitle};
+    at ($(TR) + (-24mm,-124mm)$) {\CoverZhTitle};
 
   % ---- 左下角：“出版社”的标志 ----
   \fill[white, opacity=0.88] ($(current page.south west) + (14mm,14mm)$) rectangle ++(31mm,19mm);
