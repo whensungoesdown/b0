@@ -2,7 +2,8 @@
 % 版式仿照《Computer Architecture: A Quantitative Approach》第 6 版：
 %   上半部白底，作者名一行，下面是大号细衬线的英文书名和中文书名，都靠右对齐；
 %   中间一条深红色的横带写副标题，压在照片的上沿；
-%   下半部是一张黑白照片（figures/cover_gray.png，由 tools/png_gray.py 生成），一直铺到页面底边；
+%   下半部是一张彩色照片（figures/cover.png），一直铺到页面底边；
+%   （想要黑白的，可以用 tools/png_gray.py 生成 figures/cover_gray.png，把下面的文件名换掉）
 %   中文书名左边的空白处贴着一张小小的彩色猫狗大战（figures/catdog.png）；
 %   右上角竖着一个红色的小标签，左下角是“出版社”的标志。
 
@@ -23,11 +24,11 @@
 \begin{tikzpicture}[remember picture, overlay, every node/.style={inner sep=0pt}]
   \coordinate (TR) at (current page.north east);
 
-  % ---- 下半部：黑白照片，从横带的上沿一直铺到页面底边 ----
+  % ---- 下半部：彩色照片，从横带的上沿一直铺到页面底边 ----
   \begin{scope}
     \clip ($(current page.north west) + (0,-164mm)$) rectangle (current page.south east);
     \node[anchor=south] at (current page.south)
-      {\includegraphics[height=150mm]{figures/cover_gray.png}};
+      {\includegraphics[height=150mm]{figures/cover.png}};
   \end{scope}
 
   % ---- 中间：深红色的横带（页面顶端往下 164--182 mm），写英文副标题 ----
