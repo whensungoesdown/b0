@@ -1,0 +1,101 @@
+% 全书的版式（仿照《Computer Organization and Design》第 5 版）：这一部分放在导言区。
+% 真正启用版式的是 style/lazy-on.tex。
+%   章首页：左上角一个红色方块，里面是白色的大号章号；一条竖线；
+%           右边是黑体的章标题和本章各节的小目录，左下是一段引言
+%   页眉：  偶数页“页码  第一章  章标题”，奇数页“节标题  页码”，下面一条红线
+%   页脚：  偶数页英文书名，奇数页中文书名
+%   节标题：红底白字的编号方块，后面是黑体标题
+\usepackage{fancyhdr}
+\usepackage{etoc}
+\usepackage{mparhack}   % 修正页边注偶尔放错边的问题（段落跨页时，LaTeX 会把注放到内侧）
+
+\definecolor{lazyred}{RGB}{190,30,45}          % 和封面的红色一样
+\newfontfamily\lazysans{texgyreheros}[
+  Extension=.otf, UprightFont=*-regular, BoldFont=*-bold,
+  ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+\setCJKfamilyfont{lazyhei}{FandolHei-Regular}[Extension=.otf, BoldFont=FandolHei-Bold]
+\setCJKfamilyfont{lazykai}{FandolKai-Regular}[Extension=.otf]
+\newcommand\lazyfont{\lazysans\CJKfamily{lazyhei}}   % 标题用的无衬线字体：英文 Heros，中文黑体
+
+% 每章章首页的引言：\lazyquote{章号}{中文}{原文}{出处}
+\newcommand\lazyquote[4]{%
+  \expandafter\def\csname lazyquoteA#1\endcsname{#2}%
+  \expandafter\def\csname lazyquoteB#1\endcsname{#3}%
+  \expandafter\def\csname lazyquoteC#1\endcsname{#4}}
+\lazyquote{1}{学习一门新的程序设计语言的唯一途径，就是用它来编写程序。}
+             {The only way to learn a new programming language is by writing programs in it.}
+             {Brian W. Kernighan、Dennis M. Ritchie，\\\emph{The C Programming Language}，1978}
+
+% 页眉、页脚
+\fancypagestyle{lazy}{%
+  \fancyhf{}%
+  \fancyhead[LE]{\lazyfont\bfseries\thepage\hspace{1.6em}\leftmark}%
+  \fancyhead[RO]{\lazyfont\bfseries\rightmark\hspace{1.6em}\thepage}%
+  \fancyfoot[LE]{\lazysans\footnotesize\color{gray}C Language: A Lazy Approach}%
+  \fancyfoot[RO]{\CJKfamily{lazyhei}\footnotesize\color{gray}教猫狗学编程}%
+  \renewcommand\headrule{{\color{lazyred}\hrule height 0.8pt}\vskip-0.8pt}%
+  \renewcommand\footrulewidth{0pt}}
+% 章首页：没有页眉，页脚居中写书名
+\fancypagestyle{lazyopener}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\lazysans\footnotesize\color{gray}C Language: A Lazy Approach\quad
+                \CJKfamily{lazyhei}教猫狗学编程}%
+  \renewcommand\headrule{}}
+
+% 页边注：书页外侧留出一栏空白，放术语解释和小提示（仿照 COD 的做法）
+%   \lazynote{术语}{解释}    红色黑体的术语，后面跟一句解释
+%   \lazyhint{提示}          灰色的小提示，前面有一个红色的 ▶
+\newcommand\lazynotestyle{\lazyfont\footnotesize\linespread{1.15}\selectfont\raggedright}
+\newcommand\lazynote[2]{%
+  \marginpar{\lazynotestyle{\color{lazyred}\bfseries #1}\quad #2\par}}
+\newcommand\lazyhint[1]{%
+  \marginpar{\lazynotestyle\color{black!60}{\color{lazyred}$\blacktriangleright$}\ #1\par}}
+
+% 节标题的编号：红底白字的方块
+\newcommand\lazysecnum[1]{\colorbox{lazyred}{\makebox[2.4em]{\color{white}#1}}}
+\newcommand\lazygobble[1]{}
+
+% 章首页
+\newcommand\lazychapter[1]{%
+  \begin{tikzpicture}[remember picture, overlay]
+    \coordinate (P) at (current page.north west);
+    % 红色方块和白色的大号章号
+    \fill[lazyred] ($(P) + (30mm,-28mm)$) rectangle ($(P) + (112mm,-118mm)$);
+    \node[anchor=south west, inner sep=0pt, text=white,
+          font=\lazysans\bfseries\fontsize{160}{160}\selectfont]
+      at ($(P) + (38mm,-112mm)$) {\thechapter};
+    % 竖线
+    \draw[lazyred, line width=0.6pt] ($(P) + (112mm,-96mm)$) -- ($(P) + (112mm,-238mm)$);
+    % 章标题
+    \node[anchor=north west, inner sep=0pt, text width=70mm, align=left,
+          font=\lazyfont\bfseries\fontsize{24}{30}\selectfont]
+      at ($(P) + (117mm,-124mm)$) (title) {#1};
+    % 本章各节的小目录
+    \node[anchor=north west, inner sep=0pt, text width=70mm, align=left]
+      at ($(title.south west) + (0,-6mm)$) {\lazyminitoc};
+    % 引言
+    \ifcsname lazyquoteA\arabic{chapter}\endcsname
+      \node[anchor=north east, inner sep=0pt, text width=68mm, align=flush right]
+        at ($(P) + (106mm,-168mm)$)
+        {{\CJKfamily{lazykai}\large\csname lazyquoteA\arabic{chapter}\endcsname\par}
+         \vspace{2mm}
+         {\itshape\small\csname lazyquoteB\arabic{chapter}\endcsname\par}
+         \vspace{3mm}
+         {\lazyfont\bfseries\scriptsize\csname lazyquoteC\arabic{chapter}\endcsname\par}};
+    \fi
+  \end{tikzpicture}%
+  \par\vskip\textheight}       % 占满这一页，正文从下一页开始
+
+% 小目录：只列出各节，编号是红色的
+\newcommand\lazyminitoc{%
+  \begingroup
+    \etocsetnexttocdepth{section}%
+    \etocsettocstyle{}{}%
+    \etocsetstyle{section}{}%
+      {}%
+      {\noindent\makebox[2.4em][l]{\lazyfont\bfseries\small\color{lazyred}\etocnumber}%
+       \parbox[t]{\dimexpr\linewidth-2.4em}{\lazyfont\bfseries\small\etocname
+         \nobreak\hspace{0.6em}{\mdseries\color{gray}\etocpage}}\par\vspace{1.2mm}}%
+      {}%
+    \localtableofcontents
+  \endgroup}

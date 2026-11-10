@@ -13,7 +13,7 @@ C 语言有好几个版本的国际标准，本书的代码都遵循其中的 \e
 \section{逐行读一遍}
 
 \paragraph{\texttt{\#include <stdio.h>}}
-以 \texttt{\#} 开头的行不是 C 语句，而是给\emph{预处理器}的命令。\texttt{\#include} 的意思很朴素：把 \texttt{stdio.h} 这个文件的内容原封不动地复制到这里。尖括号表示到系统的头文件目录里去找；如果写成 \texttt{\#include "stdio.h"}，就会先在当前源文件所在的目录里找。
+以 \texttt{\#} 开头的行不是 C 语句，而是给\emph{预处理器}的命令。\lazynote{预处理器}{在真正编译之前处理源代码的程序：展开 \texttt{\#include}、替换宏、去掉注释。}\texttt{\#include} 的意思很朴素：把 \texttt{stdio.h} 这个文件的内容原封不动地复制到这里。尖括号表示到系统的头文件目录里去找；如果写成 \texttt{\#include "stdio.h"}，就会先在当前源文件所在的目录里找。
 
 \texttt{stdio.h} 是“standard input/output header”的缩写，即标准输入输出头文件。我们需要它，是因为下面要调用 \texttt{printf}。
 
@@ -24,12 +24,12 @@ C 语言有好几个版本的国际标准，本书的代码都遵循其中的 \e
 调用 \texttt{printf} 函数，把一个字符串输出到屏幕上。\texttt{\textbackslash n} 是换行符。注意，\texttt{printf} 不是 C 语言的一部分，而是 C 标准库里的一个普通函数。C 语言本身没有任何输入输出的语句。
 
 \paragraph{\texttt{return 0;}}
-\texttt{main} 返回 0，告诉调用它的人：程序正常结束。在终端里运行完程序后，输入 \texttt{echo \$?}，就能看到这个 0。
+\texttt{main} 返回 0，告诉调用它的人：程序正常结束。\lazyhint{\texttt{\$?} 是 shell 记下的“上一个程序的退出状态”。0 表示成功，其他数表示出了某种问题。}在终端里运行完程序后，输入 \texttt{echo \$?}，就能看到这个 0。
 
 \section{头文件里有什么}
 \label{sec:stdio-h}
 
-\texttt{printf} 并不是在 \texttt{stdio.h} 里实现的。打开这个文件看一看，它主要是一大堆像这样的\emph{声明}：
+\texttt{printf} 并不是在 \texttt{stdio.h} 里实现的。打开这个文件看一看，它主要是一大堆像这样的\emph{声明}：\lazynote{声明}{告诉编译器一个函数叫什么、要什么参数、交回什么，但不包含函数的代码。}
 \begin{minted}[linenos=false]{c}
 extern int printf (const char *__restrict __format, ...);
 extern int puts (const char *__s);
@@ -40,7 +40,7 @@ extern int puts (const char *__s);
 所以，头文件和函数库是两样东西：
 \begin{itemize}
   \item 头文件（如 \texttt{stdio.h}）是文本文件，里面是声明，在编译时用到；
-  \item 函数库（如 Linux 上的 \texttt{libc.so.6}）是编译好的机器代码，在链接和运行时用到。
+  \item 函数库（如 Linux 上的 \texttt{libc.so.6}）是编译好的机器代码，在链接和运行时用到。\lazynote{函数库}{写好、编译好、打包在一起的一批函数，供别的程序使用。第~\ref{sec:library}~节会自己做一个。}
 \end{itemize}
 
 那么，\texttt{stdio.h} 在哪里？GCC 会按顺序在下面几个目录里查找：
@@ -124,7 +124,7 @@ gcc hello.o -o hello           # 4. 链接
 
 \subsection{第二步：编译}
 
-编译器 \texttt{cc1} 把 C 代码翻译成汇编代码。这是整个过程中最复杂的一步：词法分析、语法分析、类型检查、优化、生成代码，都在这一步完成。\texttt{hello.s} 的主要部分见代码~\ref{lst:hello-s}（为了便于阅读，这里去掉了以 \texttt{.cfi} 开头的调试信息和文件末尾的几行附加信息）。
+编译器 \texttt{cc1} 把 C 代码翻译成汇编代码。\lazynote{汇编代码}{机器指令的“文字版”，一行大致对应一条 CPU 指令，比如 \texttt{call}、\texttt{ret}。}这是整个过程中最复杂的一步：词法分析、语法分析、类型检查、优化、生成代码，都在这一步完成。\texttt{hello.s} 的主要部分见代码~\ref{lst:hello-s}（为了便于阅读，这里去掉了以 \texttt{.cfi} 开头的调试信息和文件末尾的几行附加信息）。
 
 \codefile[gas]{code/ch01/hello_main.s}{hello.s 的主要部分（x86-64）}{lst:hello-s}
 
@@ -144,19 +144,19 @@ gcc hello.o -o hello           # 4. 链接
 
 \texttt{printf} 是一个复杂的函数：它要逐个字符地扫描格式字符串，遇到 \texttt{\%d}、\texttt{\%s} 这样的格式说明就做相应的转换。而我们的字符串里没有任何格式说明，而且以 \texttt{\textbackslash n} 结尾。GCC 知道，在这种情况下，\texttt{printf("Hello, world!\textbackslash n")} 和 \texttt{puts("Hello, world!")} 的效果完全相同——\texttt{puts} 会自己在末尾加一个换行符。于是它悄悄地换成了更简单、更快的 \texttt{puts}。注意代码~\ref{lst:hello-s} 引用的字符串 \texttt{.LC0} 是 \texttt{"Hello, world!"}，末尾的 \texttt{\textbackslash n} 已经被去掉了。
 
-这件事告诉我们两点。第一，编译器比我们想象的更了解标准库：\texttt{printf}、\texttt{memcpy}、\texttt{strlen} 这些函数，在 GCC 里有专门的“内建”（built-in）版本，编译器知道它们的含义，会对它们做优化。第二，即使没有打开优化选项，编译器生成的代码也不一定是源代码的逐字翻译。
+这件事告诉我们两点。\lazynote{内建函数}{编译器认识、并且会特别对待的标准库函数，比如 \texttt{printf}、\texttt{memcpy}。}第一，编译器比我们想象的更了解标准库：\texttt{printf}、\texttt{memcpy}、\texttt{strlen} 这些函数，在 GCC 里有专门的“内建”（built-in）版本，编译器知道它们的含义，会对它们做优化。第二，即使没有打开优化选项，编译器生成的代码也不一定是源代码的逐字翻译。
 
 如果加上选项 \texttt{-fno-builtin}，告诉 GCC 不要把这些函数当作内建函数，生成的代码里就会老老实实地调用 \texttt{printf}。
 
 \subsection{第三步：汇编}
 
-汇编器 \texttt{as} 把汇编代码翻译成机器码，生成\emph{目标文件} \texttt{hello.o}。机器码就是 CPU 真正执行的东西：一串字节。用 \texttt{objdump -d -r hello.o} 可以把它反汇编出来（代码~\ref{lst:hello-o}）。
+汇编器 \texttt{as} 把汇编代码翻译成机器码，生成\emph{目标文件} \texttt{hello.o}。\lazynote{目标文件}{编译好的“半成品”，里面是机器码，但对外部函数的引用还空着，要等链接器来填。}机器码就是 CPU 真正执行的东西：一串字节。用 \texttt{objdump -d -r hello.o} 可以把它反汇编出来（代码~\ref{lst:hello-o}）。
 
 \codefile[text]{code/ch01/hello_main.objdump}{hello.o 中 main 函数的机器码}{lst:hello-o}
 
 每一行左边是这条指令在 \texttt{main} 函数中的偏移，中间是它的机器码，右边是对应的汇编指令。可以看到，x86 的指令长短不一：\texttt{push \%rbp} 只有一个字节 \texttt{55}，\texttt{lea} 有七个字节。CPU 要先弄清楚一条指令有多长，才知道下一条指令从哪里开始——这正是 x86 的 CPU 难做的原因之一，后面讲指令编码时我们还会回到这里。
 
-再看偏移 \texttt{12} 处的 \texttt{call} 指令：机器码是 \texttt{e8 00 00 00 00}。\texttt{e8} 表示“调用”，后面四个字节本应是被调用函数的相对地址，现在却全是 0。下面一行的 \texttt{R\_X86\_64\_PLT32 puts-0x4} 是一条\emph{重定位}记录，意思是：“这里要填 \texttt{puts} 的地址，但我现在还不知道它在哪里。”同样，偏移 \texttt{8} 处的 \texttt{lea} 指令也留了四个字节的空，等着填字符串的地址。
+再看偏移 \texttt{12} 处的 \texttt{call} 指令：\lazynote{重定位}{目标文件里的一张“待填写清单”：哪个位置要填哪个符号的地址。}机器码是 \texttt{e8 00 00 00 00}。\texttt{e8} 表示“调用”，后面四个字节本应是被调用函数的相对地址，现在却全是 0。下面一行的 \texttt{R\_X86\_64\_PLT32 puts-0x4} 是一条\emph{重定位}记录，意思是：“这里要填 \texttt{puts} 的地址，但我现在还不知道它在哪里。”同样，偏移 \texttt{8} 处的 \texttt{lea} 指令也留了四个字节的空，等着填字符串的地址。
 
 \texttt{hello.o} 是一个“半成品”：自己的代码已经翻译成了机器码，但对外部的引用还空着。用 \texttt{nm hello.o} 可以看到，\texttt{main} 标记为 \texttt{T}（定义在代码段中），\texttt{puts} 标记为 \texttt{U}（undefined，未定义）。
 
@@ -164,7 +164,7 @@ gcc hello.o -o hello           # 4. 链接
 
 链接器 \texttt{ld} 把目标文件和函数库拼在一起，填上所有空着的地址，生成可执行文件。
 
-\texttt{puts} 的代码在 C 标准库 \texttt{libc.so.6} 中。这是一个\emph{动态链接库}：链接时，链接器并不把 \texttt{puts} 的代码复制进 \texttt{hello}，只是记下“这个程序需要 \texttt{libc.so.6}”；等到程序运行时，再由动态链接器 \texttt{ld-linux-x86-64.so.2} 把库加载进内存，填上真正的地址。\texttt{call puts@PLT} 中的 PLT（Procedure Linkage Table，过程链接表）就是为这件事准备的一个中转站。用 \texttt{ldd hello} 可以看到程序依赖的库：
+\texttt{puts} 的代码在 C 标准库 \texttt{libc.so.6} 中。这是一个\emph{动态链接库}：\lazynote{动态链接库}{程序运行时才加载的函数库，很多程序共用内存里的同一份。Linux 上以 \texttt{.so} 结尾，Windows 上是 \texttt{.dll}。}链接时，链接器并不把 \texttt{puts} 的代码复制进 \texttt{hello}，只是记下“这个程序需要 \texttt{libc.so.6}”；等到程序运行时，再由动态链接器 \texttt{ld-linux-x86-64.so.2} 把库加载进内存，填上真正的地址。\texttt{call puts@PLT} 中的 PLT（Procedure Linkage Table，过程链接表）就是为这件事准备的一个中转站。用 \texttt{ldd hello} 可以看到程序依赖的库：
 \begin{minted}[linenos=false]{text}
 linux-vdso.so.1
 libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6
@@ -180,8 +180,8 @@ libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6
 \begin{enumerate}
   \item 终端程序（shell）请求操作系统运行 \texttt{hello}。操作系统读取这个文件，为它建立一个新的进程，把代码和数据映射到内存中。
   \item 因为程序需要动态链接库，操作系统先把控制权交给动态链接器。动态链接器加载 \texttt{libc.so.6}，填好 \texttt{puts} 等函数的地址。
-  \item 程序从 \texttt{\_start} 开始执行。它做一些准备工作，比如整理命令行参数，然后通过 C 标准库调用 \texttt{main}。
-  \item \texttt{main} 调用 \texttt{puts}。\texttt{puts} 把字符串放进标准输出的缓冲区，最终调用 \texttt{write} 系统调用，请操作系统把这些字节写到终端上。
+  \item 程序从 \texttt{\_start} 开始执行。\lazynote{入口}{程序被加载后执行的第一条指令所在的位置。C 程序真正的入口是 \texttt{\_start}，不是 \texttt{main}。}它做一些准备工作，比如整理命令行参数，然后通过 C 标准库调用 \texttt{main}。
+  \item \texttt{main} 调用 \texttt{puts}。\lazynote{系统调用}{程序请操作系统内核帮忙办事的方法，比如往屏幕上写字。第~\ref{sec:syscall}~节细讲。}\texttt{puts} 把字符串放进标准输出的缓冲区，最终调用 \texttt{write} 系统调用，请操作系统把这些字节写到终端上。
   \item \texttt{main} 返回 0。C 标准库接着调用 \texttt{exit(0)}，把缓冲区里剩下的内容写出去，然后通过 \texttt{exit\_group} 系统调用通知操作系统：这个进程结束了，退出状态是 0。
 \end{enumerate}
 
@@ -193,7 +193,7 @@ libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6
 
 CPU 的工作是一个永不停歇的循环：
 \begin{enumerate}
-  \item 取指：按照程序计数器（x86-64 中叫 \texttt{rip}）给出的地址，从内存中读出指令的字节；
+  \item \lazynote{程序计数器}{CPU 里的一个寄存器，记着下一条要执行的指令在内存中的地址，简称 PC。}取指：按照程序计数器（x86-64 中叫 \texttt{rip}）给出的地址，从内存中读出指令的字节；
   \item 译码：弄清楚这几个字节是什么指令，要用到哪些寄存器；
   \item 执行：做运算，或者访问内存；
   \item 写回：把结果写回寄存器或内存，把程序计数器指向下一条指令。

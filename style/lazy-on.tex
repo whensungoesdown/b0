@@ -1,0 +1,31 @@
+% 启用 style/lazy-preamble.tex 中定义的版式。
+% 现在只在第 1 章前后的一个 group 里启用（见 main.tex），看效果；满意之后再改成全书启用。
+% 版心变窄，外侧留出 45 mm 宽的一栏放页边注；页眉的红线也一直画到页边注那一栏
+\newgeometry{top=2.5cm, bottom=2.5cm, inner=2.2cm, outer=6.3cm, headheight=15pt,
+             marginparsep=5mm, marginparwidth=45mm}
+\fancyhfoffset[LE,RO]{\dimexpr\marginparsep+\marginparwidth\relax}
+\pagestyle{lazy}
+\ctexset{
+  chapter = {
+    pagestyle   = lazyopener,
+    format      = {},
+    nameformat  = \lazygobble,
+    aftername   = {},
+    titleformat = \lazychapter,
+    beforeskip  = 0pt,
+    afterskip   = 0pt,
+  },
+  section = {
+    format       = \Large\lazyfont\bfseries\raggedright,
+    numberformat = \lazysecnum,
+    aftername    = \hspace{0.8em},
+    beforeskip   = 4ex plus 1ex minus .2ex,
+    afterskip    = 2.5ex plus .2ex,
+  },
+  subsection = {
+    format       = \large\lazyfont\bfseries\raggedright,
+    numberformat = \color{lazyred},
+    aftername    = \hspace{0.8em},
+  },
+}
+\captionsetup{labelfont={bf, color=lazyred}}
