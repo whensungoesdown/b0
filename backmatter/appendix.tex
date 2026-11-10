@@ -69,10 +69,10 @@
 \end{figure}
 
 \paragraph{Unix 一家。}
-1969 年，贝尔实验室的 Ken Thompson 和 Dennis Ritchie 写出了 Unix。为了把 Unix 移植到别的机器上，Ritchie 发明了 C 语言，后来 Unix 的大部分代码都改用 C 重写——这就是 C 语言和操作系统那么“亲”的原因。Unix 后来分出了许多支，其中最有名的是加州大学伯克利分校的 \emph{BSD}。前言里提到的滑动窗口，就是从 4.4BSD 的代码里学来的。
+1969 年，贝尔实验室的 Ken Thompson 和 Dennis Ritchie 写出了 Unix。为了把 Unix 移植到别的机器上，Ritchie 发明了 C 语言，后来 Unix 的大部分代码都改用 C 重写——这就是 C 语言和操作系统那么“亲”的原因。Unix 后来分出了许多支，其中最有名的是加州大学伯克利分校的 \emph{BSD}\lazynote{BSD}{Berkeley Software Distribution，加州大学伯克利分校发布的 Unix 版本。}。前言里提到的滑动窗口，就是从 4.4BSD 的代码里学来的。
 
 \paragraph{Linux。}
-1991 年，芬兰大学生 Linus Torvalds 受教学用的小系统 Minix 启发，在自己的 80386 电脑上写了一个内核，取名 Linux（第~\ref{sec:bits}~节）。它不是 Unix 的后代，却照着 Unix 的样子来写，所以用起来几乎一样。Linux 本身只是一个内核，加上 GNU 的工具（gcc、glibc、bash……）和各种软件，打包在一起，才成了 Ubuntu、Debian 这样的“发行版”。今天，世界上绝大多数的服务器、全部前 500 名的超级计算机，跑的都是 Linux。
+1991 年，芬兰大学生 Linus Torvalds 受教学用的小系统 Minix 启发，在自己的 80386 电脑上写了一个内核，取名 Linux（第~\ref{sec:bits}~节）。它不是 Unix 的后代，却照着 Unix 的样子来写，所以用起来几乎一样。Linux 本身只是一个内核，加上 GNU 的工具（gcc、glibc、bash……）和各种软件，打包在一起，才成了 Ubuntu、Debian 这样的“发行版”\lazynote{发行版}{Linux 内核加上工具、软件和安装程序，打包成一个完整的系统，比如 Ubuntu。}。今天，世界上绝大多数的服务器、全部前 500 名的超级计算机，跑的都是 Linux。
 
 \paragraph{苹果。}
 苹果的 Mac 电脑在 1984 年就有了图形界面，但它今天的 macOS 却另有来历：乔布斯离开苹果后创办的 NeXT 公司，做了一个基于 BSD 的系统 NeXTSTEP；1997 年苹果买下 NeXT，乔布斯回归，NeXTSTEP 就变成了 2001 年的 Mac OS X，也就是今天的 macOS。iPhone 上的 iOS，是它的兄弟。所以，macOS 其实是一个正宗的 Unix。
@@ -159,7 +159,7 @@ root  run   sbin  srv  sys  tmp  usr  var
 它们的名字都很短，是 Unix 时代留下来的缩写（表~\ref{tab:fhs}）。
 
 \begin{table}[htbp]
-  \centering
+  \begin{lazywide}
   \caption{Linux 根目录下常见的文件夹}
   \label{tab:fhs}
   \begin{tabular}{lL{3.8cm}L{6.0cm}}
@@ -178,9 +178,10 @@ root  run   sbin  srv  sys  tmp  usr  var
     \texttt{/root} & & 超级用户（管理员）的家，别和根目录 \texttt{/} 弄混 \\
     \bottomrule
   \end{tabular}
+  \end{lazywide}
 \end{table}
 
-那另外一块硬盘去哪了？在 Linux 上，要先把它“挂载”（mount）到树上的某个文件夹，它才能被看到。WSL 就是这样做的：Windows 的 \texttt{C:} 盘挂在 \texttt{/mnt/c}，\texttt{D:} 盘挂在 \texttt{/mnt/d}。所以这本书在 Windows 里叫 \texttt{D:\textbackslash work\textbackslash mypaper}，在 WSL 里叫 \texttt{/mnt/d/work/mypaper}——是同一个文件夹，只是两个系统叫法不同。Linux 的路径用正斜杠 \texttt{/} 分隔，而且分大小写：\texttt{Hello.c} 和 \texttt{hello.c} 是两个不同的文件。
+那另外一块硬盘去哪了？在 Linux 上，要先把它“挂载”（mount）\lazynote{挂载}{把一块硬盘（或 U 盘）接到目录树的某个文件夹上，从那里就能访问它。}到树上的某个文件夹，它才能被看到。WSL 就是这样做的：Windows 的 \texttt{C:} 盘挂在 \texttt{/mnt/c}，\texttt{D:} 盘挂在 \texttt{/mnt/d}。所以这本书在 Windows 里叫 \texttt{D:\textbackslash work\textbackslash mypaper}，在 WSL 里叫 \texttt{/mnt/d/work/mypaper}——是同一个文件夹，只是两个系统叫法不同。Linux 的路径用正斜杠 \texttt{/} 分隔，而且分大小写：\texttt{Hello.c} 和 \texttt{hello.c} 是两个不同的文件。
 
 \begin{figure}[htbp]
   \centering
@@ -224,13 +225,13 @@ root  run   sbin  srv  sys  tmp  usr  var
 
 这本书从头到尾都用 \texttt{gcc} 编译程序，连 Windows 的程序也是用 MinGW 版的 gcc 编译的（第~\ref{sec:win32}~节）。为什么不用微软自己的编译器？
 
-最简单的原因：\textbf{它是免费的}，而且是自由软件，谁都可以下载、使用、甚至修改它的源代码。GCC 是 GNU 项目在 1987 年推出的，最早叫“GNU C Compiler”，后来支持的语言越来越多，就改叫“GNU Compiler Collection”。今天，它能为几十种 CPU 生成代码：x86、ARM、RISC-V……等我们以后自己造出 CPU，用来给它编译程序的，也会是 gcc。
+最简单的原因：\textbf{它是免费的}，而且是自由软件\lazynote{自由软件}{可以自由使用、研究、修改和分发的软件，源代码是公开的。}，谁都可以下载、使用、甚至修改它的源代码。GCC 是 GNU 项目在 1987 年推出的，最早叫“GNU C Compiler”，后来支持的语言越来越多，就改叫“GNU Compiler Collection”。今天，它能为几十种 CPU 生成代码：x86、ARM、RISC-V……等我们以后自己造出 CPU，用来给它编译程序的，也会是 gcc。
 
 当然，好用的编译器不止这一个。微软的 Visual Studio（用的是 MSVC 编译器）有免费的社区版，在 Windows 上写图形界面的程序很方便；苹果的 Xcode 和 Linux 上也很流行的 Clang，同样是免费的。学 C 语言，用哪个都行。本书选 gcc，是因为它在 Linux、Windows（通过 WSL 或 MinGW）上都能用，命令也都一样。
 
 \section{终端和图形界面}
 
-操作系统有两张脸：一张是黑底白字的\emph{终端}（命令行），一张是有窗口、图标、鼠标的\emph{图形界面}（GUI）。很多人以为终端是“老古董”、图形界面才“先进”，或者反过来，觉得会敲命令才是“高手”。其实两者没有好坏之分，只是适合做不同的事（图~\ref{fig:cli-gui}）。
+操作系统有两张脸：一张是黑底白字的\emph{终端}\lazynote{终端}{输入命令、显示文字结果的窗口。里面运行的 \texttt{bash} 叫做 shell。}（命令行），一张是有窗口、图标、鼠标的\emph{图形界面}（GUI）。很多人以为终端是“老古董”、图形界面才“先进”，或者反过来，觉得会敲命令才是“高手”。其实两者没有好坏之分，只是适合做不同的事（图~\ref{fig:cli-gui}）。
 
 \begin{figure}[htbp]
   \centering

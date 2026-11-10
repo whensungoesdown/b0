@@ -17,7 +17,7 @@
 \setCJKfamilyfont{lazykai}{FandolKai-Regular}[Extension=.otf]
 \newcommand\lazyfont{\lazysans\CJKfamily{lazyhei}}   % 标题用的无衬线字体：英文 Heros，中文黑体
 
-% 每章章首页的引言：\lazyquote{章号}{中文}{原文}{出处}
+% 每章章首页的引言：\lazyquote{章号}{中文}{原文}{出处}，附录的章号是 A、B……
 \newcommand\lazyquote[4]{%
   \expandafter\def\csname lazyquoteA#1\endcsname{#2}%
   \expandafter\def\csname lazyquoteB#1\endcsname{#3}%
@@ -25,6 +25,24 @@
 \lazyquote{1}{学习一门新的程序设计语言的唯一途径，就是用它来编写程序。}
              {The only way to learn a new programming language is by writing programs in it.}
              {Brian W. Kernighan、Dennis M. Ritchie，\\\emph{The C Programming Language}，1978}
+\lazyquote{2}{程序是写给人读的，只是顺便让机器执行。}
+             {Programs must be written for people to read, and only incidentally for machines to execute.}
+             {Harold Abelson、Gerald Jay Sussman，\\\emph{Structure and Interpretation of Computer Programs}，1985}
+\lazyquote{3}{人人都知道，调试一个程序比写它难一倍。所以，如果你写程序时已经用尽了聪明才智，又该怎么去调试它呢？}
+             {Everyone knows that debugging is twice as hard as writing a program in the first place.
+              So if you're as clever as you can be when you write it, how will you ever debug it?}
+             {Brian W. Kernighan、P. J. Plauger，\\\emph{The Elements of Programming Style}，第 2 版，1978}
+\lazyquote{4}{计算机科学中的所有问题，都可以通过再加一层间接来解决。}
+             {All problems in computer science can be solved by another level of indirection.}
+             {David J. Wheeler\\（Butler Lampson 在图灵奖演讲中引用）}
+\lazyquote{5}{这就是 Unix 哲学：写只做一件事、并且把它做好的程序；写能互相协作的程序。}
+             {This is the Unix philosophy: Write programs that do one thing and do it well.
+              Write programs to work together.}
+             {Doug McIlroy，见 Peter H. Salus，\\\emph{A Quarter Century of Unix}，1994}
+\lazyquote{A}{我在做一个（免费的）操作系统（只是业余爱好，不会像 GNU 那样又大又专业），用在 386（486）AT 兼容机上。}
+             {I'm doing a (free) operating system (just a hobby, won't be big and professional like gnu)
+              for 386(486) AT clones.}
+             {Linus Torvalds，新闻组 comp.os.minix，\\1991 年 8 月 25 日}
 
 % 页眉、页脚
 \fancypagestyle{lazy}{%
@@ -51,12 +69,35 @@
 \newcommand\lazyhint[1]{%
   \marginpar{\lazynotestyle\color{black!60}{\color{lazyred}$\blacktriangleright$}\ #1\par}}
 
+% 宽的图和表可以伸进页边注那一栏：\begin{lazywide} ... \end{lazywide}
+% 放在 figure、table 里，代替 \centering。总宽 = 版心 + 页边注的间隔和宽度。
+% 页边注在奇数页的右边、偶数页的左边，所以偶数页要往左挪；\ifoddpage 由 changepage 宏包判断。
+\usepackage[strict]{changepage}
+\newenvironment{lazywide}
+  {\checkoddpage
+   \ifoddpage\def\lazywideL{0pt}\def\lazywideR{-50mm}%
+   \else     \def\lazywideL{-50mm}\def\lazywideR{0pt}\fi
+   \begin{adjustwidth}{\lazywideL}{\lazywideR}\centering
+   \captionsetup{width=\linewidth}}%   题注也和加宽后的图一样宽
+  {\end{adjustwidth}}
+
 % 节标题的编号：红底白字的方块
 \newcommand\lazysecnum[1]{\colorbox{lazyred}{\makebox[2.4em]{\color{white}#1}}}
 \newcommand\lazygobble[1]{}
 
-% 章首页
-\newcommand\lazychapter[1]{%
+% 章标题：有编号的章（正文各章、附录）用整页的章首页；
+% 没有编号的章（前言、目录、代码清单、参考文献）只在页面上方放一个小一些的标题
+\newcommand\lazychapter[1]{\CTEXifname{\lazychapternumbered{#1}}{\lazychapterplain{#1}}}
+
+\newcommand\lazychapterplain[1]{%
+  \vspace*{6mm}%
+  \noindent{\color{lazyred}\rule[-3mm]{5mm}{13mm}}\hspace{5mm}%
+  {\lazyfont\bfseries\fontsize{26}{30}\selectfont #1}\par
+  \vspace{3mm}%
+  \noindent{\color{lazyred}\rule{\linewidth}{0.8pt}}\par
+  \vspace{10mm}}
+
+\newcommand\lazychapternumbered[1]{%
   \begin{tikzpicture}[remember picture, overlay]
     \coordinate (P) at (current page.north west);
     % 红色方块和白色的大号章号
@@ -74,14 +115,14 @@
     \node[anchor=north west, inner sep=0pt, text width=70mm, align=left]
       at ($(title.south west) + (0,-6mm)$) {\lazyminitoc};
     % 引言
-    \ifcsname lazyquoteA\arabic{chapter}\endcsname
+    \ifcsname lazyquoteA\thechapter\endcsname
       \node[anchor=north east, inner sep=0pt, text width=68mm, align=flush right]
         at ($(P) + (106mm,-168mm)$)
-        {{\CJKfamily{lazykai}\large\csname lazyquoteA\arabic{chapter}\endcsname\par}
+        {{\CJKfamily{lazykai}\large\csname lazyquoteA\thechapter\endcsname\par}
          \vspace{2mm}
-         {\itshape\small\csname lazyquoteB\arabic{chapter}\endcsname\par}
+         {\itshape\small\csname lazyquoteB\thechapter\endcsname\par}
          \vspace{3mm}
-         {\lazyfont\bfseries\scriptsize\csname lazyquoteC\arabic{chapter}\endcsname\par}};
+         {\lazyfont\bfseries\scriptsize\csname lazyquoteC\thechapter\endcsname\par}};
     \fi
   \end{tikzpicture}%
   \par\vskip\textheight}       % 占满这一页，正文从下一页开始
@@ -94,7 +135,7 @@
     \etocsetstyle{section}{}%
       {}%
       {\noindent\makebox[2.4em][l]{\lazyfont\bfseries\small\color{lazyred}\etocnumber}%
-       \parbox[t]{\dimexpr\linewidth-2.4em}{\lazyfont\bfseries\small\etocname
+       \parbox[t]{\dimexpr\linewidth-2.4em}{\raggedright\lazyfont\bfseries\small\etocname
          \nobreak\hspace{0.6em}{\mdseries\color{gray}\etocpage}}\par\vspace{1.2mm}}%
       {}%
     \localtableofcontents

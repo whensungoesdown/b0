@@ -25,7 +25,7 @@
 把它编译成目标文件，再用 \texttt{ar} 命令打包成一个库：
 \inputminted[linenos=false]{text}{code/ch05/out/build_lib.txt}
 
-\texttt{ar}（archive，归档）把一个或几个目标文件装进一个“包裹”里，这就是一个\emph{静态库}，文件名按规矩以 \texttt{lib} 开头、以 \texttt{.a} 结尾。\texttt{ar t} 列出包裹里有什么，\texttt{nm} 列出包裹里有哪些函数：\texttt{T} 表示这个函数就在这里（第~\ref{chap:hello}~章见过），\texttt{U} 表示这个函数在这里用到了，却不在这里——\texttt{greet} 要调用 \texttt{printf}，可 \texttt{printf} 不在我们的库里。我们的库，自己又用着别人的库。
+\texttt{ar}（archive，归档）把一个或几个目标文件装进一个“包裹”里，这就是一个\emph{静态库}\lazynote{静态库}{链接时，用到的代码被复制进程序里。Linux 上以 \texttt{.a} 结尾。}，文件名按规矩以 \texttt{lib} 开头、以 \texttt{.a} 结尾。\texttt{ar t} 列出包裹里有什么，\texttt{nm} 列出包裹里有哪些函数：\texttt{T} 表示这个函数就在这里（第~\ref{chap:hello}~章见过），\texttt{U} 表示这个函数在这里用到了，却不在这里——\texttt{greet} 要调用 \texttt{printf}，可 \texttt{printf} 不在我们的库里。我们的库，自己又用着别人的库。
 
 使用这个库的程序，只要包含头文件，然后调用库里的函数：
 
@@ -74,7 +74,7 @@ gcc use_greet.c -L. -lgreet -o use_greet
 
 \subsection{C 标准库}
 
-\texttt{printf} 是谁写的？答案是：C \emph{标准库}。C 语言的标准不仅规定了语法，还规定了一套所有 C 程序都能用的函数，以及声明这些函数的头文件（表~\ref{tab:libc}）。我们到现在为止用过的 \texttt{printf}、\texttt{scanf}、\texttt{malloc}、\texttt{free}、\texttt{fopen}，都来自 C 标准库。
+\texttt{printf} 是谁写的？答案是：C \emph{标准库}\lazynote{C 标准库}{C 语言标准规定的一套函数和头文件，每个 C 编译器都要提供。}。C 语言的标准不仅规定了语法，还规定了一套所有 C 程序都能用的函数，以及声明这些函数的头文件（表~\ref{tab:libc}）。我们到现在为止用过的 \texttt{printf}、\texttt{scanf}、\texttt{malloc}、\texttt{free}、\texttt{fopen}，都来自 C 标准库。
 
 \begin{table}[htbp]
   \centering
@@ -98,7 +98,7 @@ gcc use_greet.c -L. -lgreet -o use_greet
   \item Linux 上最常用的是 GNU 的 C 库，叫 \emph{glibc}，也就是我们一直在用的 \texttt{libc.so.6}；另外还有小巧的 musl，安卓手机上用的是 Bionic。
   \item Windows 上，C 标准库由微软的 C 运行库提供，比如老一些的 \texttt{msvcrt.dll} 和新一些的 UCRT（\texttt{ucrtbase.dll}）。
 \end{itemize}
-不要把 glibc 和 \emph{GLib} 弄混了。GLib 是另一个库，是 GNOME 桌面和 GTK 图形界面的基础，提供链表、哈希表、事件循环这些更高级的工具。它自己就是用 C 写的，用着 glibc 提供的函数——又是一个“库用着库”的例子。
+不要把 glibc 和 \emph{GLib}\lazynote{glibc 和 GLib}{glibc 是 C 标准库；GLib 是 GNOME 的工具库。名字像，不是一个东西。} 弄混了。GLib 是另一个库，是 GNOME 桌面和 GTK 图形界面的基础，提供链表、哈希表、事件循环这些更高级的工具。它自己就是用 C 写的，用着 glibc 提供的函数——又是一个“库用着库”的例子。
 
 \section{最后都要找操作系统：系统调用}
 \label{sec:syscall}
@@ -113,7 +113,7 @@ C 标准库再厉害，也还是一段普通的代码，运行在用户态，同
 
 \begin{enumerate}
   \item \texttt{printf} 是 C 标准库的函数，最好用，能按 \texttt{\%d} 这样的格式把数转换成字。
-  \item \texttt{write} 不在 C 标准库里，它是 POSIX 标准规定的函数。POSIX 是 Linux、macOS 这一类操作系统共同遵守的标准，比 C 标准离操作系统更近一步。\texttt{write} 只会原样写出一串字节，不会做格式转换。
+  \item \texttt{write} 不在 C 标准库里，它是 POSIX 标准规定的函数\lazynote{POSIX}{Unix 一类操作系统共同遵守的接口标准，规定了 \texttt{write}、\texttt{open} 等函数。}。POSIX 是 Linux、macOS 这一类操作系统共同遵守的标准，比 C 标准离操作系统更近一步。\texttt{write} 只会原样写出一串字节，不会做格式转换。
   \item \texttt{syscall} 直接发起\emph{系统调用}：告诉操作系统，我要做第几号服务，参数是什么。\texttt{SYS\_write} 就是“写”这项服务的编号，在 x86-64 的 Linux 上是 1。
 \end{enumerate}
 
@@ -121,7 +121,7 @@ C 标准库再厉害，也还是一段普通的代码，运行在用户态，同
 
 \subsection{用 strace 偷看系统调用}
 
-这三种方法，到了操作系统那里有什么区别？\texttt{strace} 可以告诉我们。它能把一个程序发出的每一个系统调用都记录下来。只看 \texttt{write} 这一种：
+这三种方法，到了操作系统那里有什么区别？\texttt{strace} 可以告诉我们\lazyhint{还没装 \texttt{strace}？在 WSL 中运行 \texttt{sudo apt install strace}。}。它能把一个程序发出的每一个系统调用都记录下来。只看 \texttt{write} 这一种：
 \begin{minted}[linenos=false]{text}
 strace -e trace=write ./layers
 \end{minted}
@@ -276,7 +276,7 @@ strace -e trace=openat,write,close ./file
 \inputminted[linenos=false]{text}{code/ch05/out/strace_file.txt}
 
 \begin{table}[htbp]
-  \centering
+  \begin{lazywide}
   \caption{C 标准库的函数和它们用到的系统调用}
   \label{tab:file-syscalls}
   \begin{tabular}{lll}
@@ -288,9 +288,10 @@ strace -e trace=openat,write,close ./file
     \texttt{fclose(fp)}               & \texttt{close(3)} & 关闭 3 号文件 \\
     \bottomrule
   \end{tabular}
+  \end{lazywide}
 \end{table}
 
-对照表~\ref{tab:file-syscalls}，一一对应。内核把打开的文件编上号，叫做\emph{文件描述符}：0 是标准输入（键盘），1 是标准输出（屏幕），2 是标准错误，新打开的文件从 3 开始编号。\texttt{printf} 往屏幕上写，用的就是 1 号；\texttt{layers.c} 里的 \texttt{write(1, ...)}，那个 1 也是这个意思。
+对照表~\ref{tab:file-syscalls}，一一对应。内核把打开的文件编上号，叫做\emph{文件描述符}\lazynote{文件描述符}{内核给打开的文件编的号码。0 是标准输入，1 是标准输出，2 是标准错误。}：0 是标准输入（键盘），1 是标准输出（屏幕），2 是标准错误，新打开的文件从 3 开始编号。\texttt{printf} 往屏幕上写，用的就是 1 号；\texttt{layers.c} 里的 \texttt{write(1, ...)}，那个 1 也是这个意思。
 
 注意，\texttt{fprintf} 并没有马上发出 \texttt{write}，而是先把字攒在缓冲区里，等到 \texttt{fclose} 时才一次写出去。系统调用要进出内核，比普通的函数调用慢得多，所以标准库能少调用一次就少调用一次——这也是服务员替我们做的一件好事。
 
@@ -299,7 +300,7 @@ strace -e trace=openat,write,close ./file
 
 \subsection{用 Win32 API 写程序}
 
-Windows 也有自己的内核，也有系统调用，但微软并不希望程序直接去碰它们。Windows 给程序员的是另一套接口：\emph{Win32 API}。它是由 \texttt{kernel32.dll}、\texttt{user32.dll}、\texttt{gdi32.dll} 等一大批动态库提供的几千个函数，打开文件、创建窗口、画图、联网……Windows 上的程序几乎都要通过它们来做事。
+Windows 也有自己的内核，也有系统调用，但微软并不希望程序直接去碰它们。Windows 给程序员的是另一套接口：\emph{Win32 API}\lazynote{API}{Application Programming Interface，一个系统或者库提供给程序使用的一套函数。}。它是由 \texttt{kernel32.dll}、\texttt{user32.dll}、\texttt{gdi32.dll} 等一大批动态库提供的几千个函数，打开文件、创建窗口、画图、联网……Windows 上的程序几乎都要通过它们来做事。
 
 先看一个用 Win32 API 打印一行字的程序：
 
@@ -307,7 +308,7 @@ Windows 也有自己的内核，也有系统调用，但微软并不希望程序
 
 \begin{itemize}
   \item \texttt{windows.h} 是 Win32 API 的总头文件。
-  \item \texttt{HANDLE} 叫\emph{句柄}，是 Windows 用来指代一个“东西”的号码，比如一个打开的文件、一个窗口。它的作用，和 Linux 的文件描述符差不多。\texttt{GetStdHandle(STD\_OUTPUT\_HANDLE)} 拿到的就是标准输出的句柄。
+  \item \texttt{HANDLE} 叫\emph{句柄}\lazynote{句柄}{Windows 用来指代一个“东西”（文件、窗口……）的号码，类似文件描述符。}，是 Windows 用来指代一个“东西”的号码，比如一个打开的文件、一个窗口。它的作用，和 Linux 的文件描述符差不多。\texttt{GetStdHandle(STD\_OUTPUT\_HANDLE)} 拿到的就是标准输出的句柄。
   \item \texttt{DWORD} 是 Windows 自己起名字的 32 位无符号整数类型。Win32 API 里这样的名字很多，比如 \texttt{BOOL}、\texttt{LPCSTR}，看多了就习惯了。
   \item \texttt{WriteFile} 往一个句柄里写一串字节，最后两个参数分别用来交回实际写了多少字节，以及做“异步”读写（这里用不到，给 \texttt{NULL}）。注意交给它的是 \texttt{\&written}——它要把结果写进我们的变量，所以要的是地址（第~\ref{sec:swap}~节）。
 \end{itemize}
@@ -368,7 +369,7 @@ Win32 API 当然不只会打印字。下面这个程序弹出一个对话框问�
 图~\ref{fig:stacks} 把两个系统放在一起对比。楼层的名字不一样，结构却是一样的：程序调用库，库一层一层地往下，最后都由一条 \texttt{syscall} 指令走进内核。
 
 \begin{figure}[htbp]
-  \centering
+  \begin{lazywide}
   \begin{tikzpicture}[
       layer/.style={draw, text width=54mm, minimum height=7.5mm, font=\footnotesize, align=center},
       line width=0.7pt,
@@ -390,6 +391,7 @@ Win32 API 当然不只会打印字。下面这个程序弹出一个对话框问�
   \end{tikzpicture}
   \caption{Linux 和 Windows：楼层的名字不同，结构是一样的}
   \label{fig:stacks}
+  \end{lazywide}
 \end{figure}
 
 \section{回到 CPU}

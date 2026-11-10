@@ -10,8 +10,10 @@
 ]{ctexbook}
 
 % ---------- 页面 ----------
-\usepackage[top=2.5cm, bottom=2.5cm, inner=3cm, outer=2.5cm,
-            headheight=15pt]{geometry}   % 页眉用黑体粗体，比默认的 12pt 高一点
+% 版心较窄，外侧留出 45 mm 宽的一栏放页边注（\lazynote、\lazyhint，见 style/lazy-preamble.tex）
+% headheight：页眉用黑体粗体，比默认的 12pt 高一点
+\usepackage[top=2.5cm, bottom=2.5cm, inner=2.2cm, outer=6.3cm, headheight=15pt,
+            marginparsep=5mm, marginparwidth=45mm]{geometry}
 \linespread{1.3}
 \setlength{\emergencystretch}{3em}   % 行内有较长的代码词时，允许适当拉伸，避免文字伸出版心
 
@@ -31,7 +33,7 @@
 % minted 用 Pygments 高亮，通过 latexminted 调用（见 .latexmkrc 和 tools/latexminted）
 \usepackage[newfloat]{minted}
 \setminted{
-  fontsize=\small,
+  fontsize=\footnotesize,   % 版心留出了页边注那一栏，代码用小一号的字，一行能放下 80 多个字符
   linenos,
   numbersep=6pt,
   frame=single,
@@ -74,6 +76,7 @@
 % ---------- 超链接（放在最后加载） ----------
 % ---------- 版式：页眉、页脚、章首页、节标题 ----------
 \input{style/lazy-preamble}
+\input{style/lazy-on}
 
 % bookmarksnumbered：PDF 书签（阅读器侧边栏的目录）里也带上“第一章”、“1.1”这样的编号
 \usepackage[hidelinks, unicode, bookmarksnumbered]{hyperref}
@@ -98,11 +101,7 @@
 \listoflistings
 
 \mainmatter
-\begingroup                % 新版式先只用在第 1 章上
-\input{style/lazy-on}
 \include{chapters/ch01}
-\endgroup
-\restoregeometry           % 其他章节还是原来的版心
 \include{chapters/ch02}
 \include{chapters/ch03}
 \include{chapters/ch04}

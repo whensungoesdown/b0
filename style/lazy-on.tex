@@ -1,9 +1,7 @@
-% 启用 style/lazy-preamble.tex 中定义的版式。
-% 现在只在第 1 章前后的一个 group 里启用（见 main.tex），看效果；满意之后再改成全书启用。
-% 版心变窄，外侧留出 45 mm 宽的一栏放页边注；页眉的红线也一直画到页边注那一栏
-\newgeometry{top=2.5cm, bottom=2.5cm, inner=2.2cm, outer=6.3cm, headheight=15pt,
-             marginparsep=5mm, marginparwidth=45mm}
-\fancyhfoffset[LE,RO]{\dimexpr\marginparsep+\marginparwidth\relax}
+% 启用 style/lazy-preamble.tex 中定义的版式（main.tex 在导言区里 \input 它，全书都用）。
+% 版心的大小在 main.tex 的 geometry 选项里：外侧留出 45 mm 宽的一栏放页边注，
+% 页眉的红线也一直画到页边注那一栏（5 mm 间隔 + 45 mm 宽 = 50 mm）。
+\fancyhfoffset[LE,RO]{50mm}
 \pagestyle{lazy}
 \ctexset{
   chapter = {
