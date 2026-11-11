@@ -1,0 +1,38 @@
+% 全书正文的结尾：放在第 5 章之后、附录之前，不编号
+\chapter*{写在最后}
+\addcontentsline{toc}{chapter}{写在最后}
+\markboth{写在最后}{写在最后}
+
+不想写一本很厚的书，让我显得很专业，让你觉得怎么也读不完。所以，书到这里就结束了。已经写了不少东西。
+
+学编程的过程中，肯定会遇到很多困难。但这也是一件很有意义的事：编程是和机器说话，将来是和机器人说话。
+
+你也相信未来会有很多机器人吧？说不定还会有机器人和人类的战争，就像电影《黑客帝国》（\emph{The Matrix}）里那样。到了那样的世界，需要真正弄懂系统是怎样工作的。你得用程序设计语言、用汇编代码、用 0 和 1 去和机器人说话，甚至用电压毛刺（voltage glitch）、用电流浪涌（current surge）、用电磁脉冲（electromagnetic pulse）去和它们战斗。
+
+所以你现在觉得用 C 语言编程很难？再想想。
+
+\bigskip
+
+好吧，我知道你把书翻到这里，可能还是什么都不会。你盯着手里的 iPad，心里在想：我该从哪里开始？该下载哪个 App？这本书讲的跟我手里的东西对不上啊。
+
+你的第一个挑战就是把编程环境搭起来。敲进去一个 Hello, world，编译通过，运行。不会了就反复翻这本书，遇到不懂的词就上网搜，deekseek搜！
+
+\begin{center}
+  \begin{tikzpicture}[line width=0.8pt]
+    % 终端窗口
+    \filldraw[fill=black!85, draw=gray] (0,0) rectangle (6.4,2.6);
+    \fill[gray!50] (0,2.35) rectangle (6.4,2.6);
+    \foreach \x/\c in {0.15/red!70, 0.35/yellow!80!orange, 0.55/green!60!black}
+      \fill[\c] (\x,2.475) circle (0.06);
+    \node[anchor=north west, align=left, font=\ttfamily\small, text=green!70] at (0.15,2.2)
+      {\$ gcc hello.c -o hello\\\$ ./hello\\Hello, world!\\\$ \_};
+    \node[font=\lazyfont\bfseries\small, text=lazyred] at (3.2,-0.4) {你的第一个挑战};
+  \end{tikzpicture}
+\end{center}
+
+至于每一章最后的练习题，别太在意——那些不是我写的，是 AI 写的。
+
+\vspace{2em}
+\begin{flushright}
+  {\CJKfamily{lazykai}\large 祝你好运。}
+\end{flushright}
