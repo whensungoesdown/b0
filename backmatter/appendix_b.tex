@@ -1,0 +1,254 @@
+\chapter{程序员的“圣战”}
+\label{app:holy-wars}
+
+程序员是一群很讲道理的人。可一旦说到花括号该放在哪里、缩进该用几格、该用哪个编辑器，再讲道理的人也会面红耳赤，吵上几十年都没有结果。这样的争论，程序员们自嘲为\emph{圣战}（holy war）\lazynote{圣战}{程序员的行话，指那些没有标准答案、却能吵上几十年的争论。}。
+
+这个附录讲几场最有名的圣战，以及它们背后的故事。先说好：这些争论大多没有对错。吵得越凶，越说明两边都有道理。
+
+\section{一切从鸡蛋开始}
+
+“圣战”这个说法在计算机界流行起来，要感谢一篇 1980 年 4 月 1 日发表的文章：Danny Cohen 的《On Holy Wars and a Plea for Peace》（论圣战，兼呼吁和平）。它的第一句话是：“这是一次阻止战争的尝试。”
+
+Cohen 说的“战争”，是第~\ref{sec:mem-street}~节讲过的字节顺序：一个多字节的数，是先放（先发送）它的低位字节，还是高位字节？这个问题在网络刚刚诞生的年代吵得不可开交。Cohen 从《格列佛游记》里借来了两个词：小人国和邻国为了吃鸡蛋该先敲小的一头还是大的一头，打了一场血流成河的战争，两派分别叫“小端派”（Little-Endians）和“大端派”（Big-Endians）（图~\ref{fig:eggs}）。从此，little-endian 和 big-endian 就成了计算机的术语。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    \foreach \x/\s/\who/\say in {0/1/小端派/{先敲小头！}, 6.0/-1/大端派/{先敲大头！}} {
+      \begin{scope}[shift={(\x,0)}]
+        % 小人
+        \draw (0,1.6) circle (0.22);
+        \draw (0,1.38) -- (0,0.6);
+        \draw (0,0.6) -- (-0.2,0) (0,0.6) -- (0.2,0);
+        \draw (0,1.2) -- (\s*0.55,1.35);
+        \draw (0,1.2) -- (-\s*0.35,0.9);
+        % 鸡蛋（小头朝向对方）
+        \filldraw[fill=yellow!15] (\s*0.9,1.4) ellipse (0.32 and 0.22);
+        \fill[orange!70] (\s*1.2,1.4) circle (0.05);   % 先敲的那一头
+        \node[font=\small] at (0,-0.35) {\who};
+        \node[draw, rounded corners, fill=white, font=\small] at (\s*0.4,2.45) {\say};
+      \end{scope}
+    }
+    \node[font=\Large\bfseries, text=lazyred] at (3.0,1.2) {VS};
+    \draw[gray, line width=1pt] (-1.2,0) -- (7.2,0);
+  \end{tikzpicture}
+  \caption{《格列佛游记》里的鸡蛋战争，也是字节顺序之争的名字由来}
+  \label{fig:eggs}
+\end{figure}
+
+今天，x86 和 RISC-V 都是小端，网络上传输的数据按惯例用大端（所以大端又叫“网络字节序”）。这场战争并没有分出胜负，只是大家学会了和平共处：需要的时候，转换一下就是了。
+
+\section{花括号放在哪里}
+
+C 语言用花括号 \texttt{\{\}} 把代码括成一块，可是没有规定左花括号该放在哪里。于是就有了好几个“门派”：
+
+\begin{minted}[linenos=false]{c}
+/* K&R 风格：左花括号放在行尾 */
+if (x > 0) {
+    y = 1;
+}
+
+/* Allman 风格：左花括号另起一行 */
+if (x > 0)
+{
+    y = 1;
+}
+
+/* GNU 风格：花括号缩进 2 格，里面的代码再缩进 2 格 */
+if (x > 0)
+  {
+    y = 1;
+  }
+\end{minted}
+
+\begin{itemize}
+  \item \textbf{K\&R 风格}来自 C 语言之父 Kernighan 和 Ritchie 的那本《The C Programming Language》，本书用的就是它。
+  \item \textbf{Allman 风格}以 Eric Allman 命名，他是 BSD 上很多程序（比如收发邮件的 sendmail）的作者。它的好处是左右花括号上下对齐，一眼就能看出哪两个是一对。
+  \item \textbf{GNU 风格}是 GNU 项目的编码规范规定的。很多人第一次看到它，都会愣一下。
+\end{itemize}
+
+Linux 内核站在 K\&R 这边，而且立场非常鲜明。它的编码规范里说：大多数语句的左花括号放在行尾；只有函数例外，函数的左花括号另起一行。有人说这样前后不一致，规范的回答是：“所有思维正常的人都知道：(a) K\&R 是\emph{对的}；(b) K\&R 是对的。”\lazynote{为什么函数例外}{内核规范给的理由是：C 语言里函数不能嵌套，所以函数是特殊的。另一种常见的说法是：早期的 C 语言把参数的类型写在右括号和左花括号之间。}至于 GNU 风格，规范的开头是这样一段话：“我建议把 GNU 编码规范打印一份出来，\emph{不要}读它，然后把它烧掉，这是一个很好的象征性的姿态。”
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    \foreach \x/\s/\brace/\say in {0/1/{if (x) \{}/{放在行尾！}, 5.6/-1/{\{}/{另起一行！}} {
+      \begin{scope}[shift={(\x,0)}]
+        \draw (0,1.6) circle (0.22);
+        \draw (0,1.38) -- (0,0.6);
+        \draw (0,0.6) -- (-0.2,0) (0,0.6) -- (0.2,0);
+        \draw (0,1.2) -- (\s*0.5,1.5);
+        \draw (0,1.2) -- (-\s*0.3,0.85);
+        \node[font=\ttfamily\bfseries\huge, text=lazyred] at (\s*0.95,1.75) {\{};
+        \node[draw, rounded corners, fill=white, font=\small] at (\s*0.2,2.6) {\say};
+      \end{scope}
+    }
+    \node[font=\small, gray, align=center] at (2.8,0.6) {第 1\,000\,000 回合};
+    \draw[gray, line width=1pt] (-1.0,0) -- (6.6,0);
+  \end{tikzpicture}
+  \caption{花括号之争}
+  \label{fig:braces}
+\end{figure}
+
+\section{起名字}
+
+计算机科学里流传着一句话：“计算机科学里只有两件难事：缓存失效，和给东西起名字。”给函数和变量起名字，也是一场圣战。
+
+\subsection{微软的风格}
+
+第~\ref{chap:c-structure}~章的 Windows 驱动里，到处是 \texttt{ZwCreateFile}、\texttt{ExAllocatePool2}、\texttt{IO\_STATUS\_BLOCK} 这样的名字。Windows 内核的函数名，每个单词首字母大写（这叫 PascalCase），前面再加两三个字母，说明它属于内核的哪个部分：\texttt{Io} 是输入输出管理器，\texttt{Ke} 是内核核心，\texttt{Mm} 是内存管理器，\texttt{Ex} 是执行体，\texttt{Ob} 是对象管理器……
+
+那 \texttt{Zw} 是什么意思？答案出人意料：\textbf{什么意思也没有}。微软的官方文档写得很清楚：\texttt{Nt} 是 Windows NT 的缩写，而 \texttt{Zw} 没有任何含义。选这两个字母，一是为了不和别的 API 撞名字，二是为了不占用将来可能有用的两字母前缀。微软的老员工 Raymond Chen 在他的博客里回答这个问题，也只用了一个词：“Nothing.”\lazyhint{网上流传着“Zw = Zero Wait”之类的说法，都是猜的，微软并不承认。}
+
+微软还有一个更有名的命名习惯：\emph{匈牙利命名法}。变量名前面加上表示类型的小写前缀：\texttt{dwFlags} 是一个 DWORD，\texttt{lpszName} 是一个“指向以零结尾的字符串的长指针”，\texttt{hWnd} 是一个窗口的句柄。它的发明者是微软的 Charles Simonyi，一个匈牙利人，所以叫匈牙利命名法。\lazynote{匈牙利命名法}{在变量名前面加上表示类型的前缀。发明者 Charles Simonyi 是匈牙利人，因此得名。}Simonyi 本来的意思，是用前缀表示变量的\emph{用途}（比如是行号还是列号）；后来很多人把它用成了表示变量的\emph{类型}，反倒成了累赘。
+
+\subsection{Linux 的风格}
+
+Linux 和 Unix 的世界里，名字全用小写，单词之间用下划线隔开（这叫 snake\_case）：\texttt{copy\_from\_user}、\texttt{count\_active\_users}。Linux 内核的编码规范说，C 程序员不会用 \texttt{This\-Variable\-Is\-A\-Temporary\-Counter} 这种“可爱”的名字，一个临时变量叫 \texttt{tmp} 就够了；至于匈牙利命名法，规范的评价只有一个词：“愚蠢”（asinine）——类型编译器早就知道了，写进名字里只会让人糊涂。
+
+不过，Unix 世界并没有一个叫 \texttt{create\_file} 的函数。打开或新建一个文件，用的是 \texttt{open}，还有一个专门新建文件的系统调用，叫 \texttt{creat}——少了一个 \texttt{e}。据 Kernighan 和 Pike 在《The UNIX Programming Environment》（1984）里记载，有人问 Unix 的发明人 Ken Thompson，如果重新设计 Unix，他会做哪些不同的事？他的回答是：“我会把 creat 拼上 e。”几十年后，Thompson 参与设计 Go 语言，Go 的标准库里，这个名字终于写成了 \texttt{O\_CREATE}。
+
+\section{缩进几格}
+
+缩进的宽度，各个社区都有自己的规矩（表~\ref{tab:indent}）。
+
+\begin{table}[htbp]
+  \begin{lazywide}
+  \caption{各家的缩进宽度}
+  \label{tab:indent}
+  \begin{tabular}{cL{4.2cm}L{6.4cm}}
+    \toprule
+    宽度 & 谁这样用 & 说明 \\
+    \midrule
+    8 & Linux 内核 & 用 Tab 缩进，Tab 宽 8 列 \\
+    4 & Python（PEP 8）、本书的 C 代码 & Python 用缩进表示代码块，缩进错了程序就错了 \\
+    2 & GNU 的 C 代码、Google 的 C++ 规范、Ruby、Lisp & 代码嵌套得深时，不容易挤到屏幕右边 \\
+    3 & Verilog（用 Emacs 编辑时） & Emacs 的 verilog-mode 默认 \texttt{verilog-indent-level} 是 3 \\
+    \bottomrule
+  \end{tabular}
+  \end{lazywide}
+\end{table}
+
+Verilog 的 3 格缩进是个有趣的例子。Verilog 语言本身并没有规定缩进几格。可是很多芯片工程师用 Emacs 写 Verilog，而 Emacs 的 verilog-mode 默认就缩进 3 格；用的人多了，3 格就成了不少芯片公司代码的样子。一个编辑器的默认设置，悄悄地定下了一个行业的习惯。
+
+Linux 内核对此的态度，依然毫不含糊：“Tab 是 8 个字符宽，所以缩进也是 8 个字符。有一些异端运动试图把缩进改成 4 个（甚至 2 个！）字符，这就好比想把圆周率定义成 3。”8 格缩进的代码，嵌套三四层就挤到右边去了。规范说，这正是好处：“如果你需要 3 层以上的缩进，那你的程序反正已经完蛋了，应该改一改。”——这和第~\ref{chap:c-structure}~章“成功路径自上而下、不要层层嵌套”的道理是一样的。
+
+\section{\texorpdfstring{\NoCaseChange{Tab}}{Tab} 还是空格}
+
+缩进用 Tab 还是用空格，可能是最古老、最激烈的一场圣战。
+
+\begin{minted}[linenos=false]{text}
+用 Tab 缩进（一个字符 0x09，这里画成 -------> ）：
+if (x > 0) {
+------->y = 1;
+}
+
+用 4 个空格缩进（四个字符 0x20，这里画成 . ）：
+if (x > 0) {
+....y = 1;
+}
+\end{minted}
+
+\textbf{Tab 派}说：缩进一层就是一个 Tab，语义清楚；每个人可以在自己的编辑器里把 Tab 设成自己喜欢的宽度，看着舒服就行；文件也小一些。
+
+\textbf{空格派}说：可正因为 Tab 的宽度各人不同，在你的编辑器里对得整整齐齐的代码，到了我这里就歪七扭八。用空格，在哪里看都一样。
+
+最糟糕的是两种混在一起用。Python 用缩进表示代码块，Tab 和空格混用会让程序的意思都变了，所以 Python 3 干脆规定：混用得前后不一致，直接报错（\texttt{TabError}）。
+
+\paragraph{Makefile：非用 Tab 不可。}
+\lazyhint{就因为当年不想得罪十几个朋友，几十年来全世界的程序员都得记住：Makefile 里要用 Tab。}本书里的每一个 Makefile，命令那一行都\emph{必须}用 Tab 开头，换成空格，\texttt{make} 就会报错。为什么定这么一条别扭的规矩？make 的作者 Stuart Feldman 后来回忆：他写 make 的时候，想顺便学一学刚出来的 Lex 工具，结果第一次就没用好，干脆用“换行加 Tab”来识别命令行。这个办法能用，就这么定下来了。“几个星期以后，我已经有了大约一打的用户，大多数是我的朋友，我不想把我已经部署出去的东西搞坏。剩下的，很遗憾，就成了历史。”
+
+\paragraph{用空格的人挣得更多？}
+2017 年，Stack Overflow 的数据科学家 David Robinson 分析了当年开发者调查的数据，发表了一篇轰动一时的文章：《用空格的开发者比用 Tab 的挣得多》。在一万两千多个回答了工资的职业开发者中，用空格的人工资的中位数是 59\,140 美元，用 Tab 的人是 43\,750 美元；即使考虑了国家、工作年限、使用的语言等因素，用空格仍然和高 8.6\% 的工资联系在一起。当然，Robinson 自己也提醒：这只是相关，不是因果。把你的 Tab 换成空格，并不会让老板给你涨工资。
+
+就连电视剧也拿这场战争开玩笑。美剧《硅谷》（\emph{Silicon Valley}）里，主角 Richard 因为女朋友用空格缩进，两个人吵到分手。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.7pt]
+    % 一行代码的格子
+    \foreach \i in {0,...,11} \draw[gray!50] (\i*0.55,0) rectangle +(0.55,0.55);
+    \foreach \i/\c in {8/y, 9/=, 10/1, 11/;} \node[font=\ttfamily] at (\i*0.55+0.275,0.275) {\c};
+    \fill[lazyred!20] (0,0.62) rectangle (4.4,1.0);
+    \node[font=\ttfamily\small] at (2.2,0.81) {Tab：1 个字符，显示成 8 列};
+    \begin{scope}[shift={(0,-1.1)}]
+      \foreach \i in {0,...,11} \draw[gray!50] (\i*0.55,0) rectangle +(0.55,0.55);
+      \foreach \i in {0,...,3} \node at (\i*0.55+0.275,0.275) {.};
+      \foreach \i/\c in {4/y, 5/=, 6/1, 7/;} \node[font=\ttfamily] at (\i*0.55+0.275,0.275) {\c};
+      \node[font=\small, anchor=west] at (6.8,0.275) {4 个空格：4 个字符，4 列};
+    \end{scope}
+    \node[draw, rounded corners, fill=white, font=\small] at (8.0,1.2) {为这个分手，值得吗？};
+  \end{tikzpicture}
+  \caption{Tab 和空格}
+  \label{fig:tabs}
+\end{figure}
+
+\section{\texorpdfstring{\NoCaseChange{Vim}}{Vim} 和 \texorpdfstring{\NoCaseChange{Emacs}}{Emacs}}
+
+如果说有一场圣战能让所有程序员都选边站，那就是\emph{编辑器之战}：vi 还是 Emacs？
+
+两个编辑器都诞生于 1976 年。vi 是 Bill Joy 在伯克利写的（没错，又是 BSD 那一家），后来有了更强大的 Vim（Vi IMproved），由荷兰程序员 Bram Moolenaar 在 1991 年发布，他一直维护到 2023 年去世。Emacs 最早是 Richard Stallman 和 Guy Steele 写的一组编辑宏，后来 Stallman 写了 GNU Emacs，成了 GNU 项目最早的成果之一。
+
+两个编辑器的思路完全不同。vi 有“模式”：在普通模式下，每个键都是一个命令；要打字，得先按 \texttt{i} 进入插入模式。Emacs 没有模式，命令都靠 Ctrl、Alt 这些组合键；它还内置了一门 Lisp 语言，什么都能往里加，收邮件、玩游戏、看网页……
+
+于是，双方的嘲讽也都有了着力点：
+\begin{itemize}
+  \item vi 派说：Emacs 是一个很棒的操作系统，就是缺一个好用的编辑器。
+  \item Emacs 派说：Emacs 的名字是 Escape-Meta-Alt-Control-Shift 的缩写——要按的键太多了。（这是 vi 派编的。）
+  \item Stallman 给自己封了一个圣号：Emacs 教会的“圣 IGNUcius”。他说：“vi vi vi 是野兽的编辑器。”——vi 在罗马数字里是 6，vi vi vi 就是 666。不过他又补充说，使用自由软件版本的 vi 并不是罪过，只是一种苦修。
+\end{itemize}
+
+vi 最有名的“缺点”，是新手进去了就出不来。2012 年，有人在 Stack Overflow 上问：“怎样退出 Vim 编辑器？”到 2017 年，这个问题已经帮助了一百多万人；到 2019 年，看过它的人超过了两百万。答案其实很简单：按 \texttt{Esc}，再敲 \texttt{:q!}，回车。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    % 圣 IGNUcius
+    \draw (0,1.6) circle (0.22);
+    \draw[yellow!70!orange, line width=1.5pt] (0,2.0) ellipse (0.3 and 0.08);
+    \draw (0,1.38) -- (0,0.6);
+    \draw (0,0.6) -- (-0.2,0) (0,0.6) -- (0.2,0);
+    \draw (0,1.2) -- (0.4,1.45) (0,1.2) -- (-0.4,1.45);
+    \node[font=\small, align=center] at (0,-0.4) {圣 IGNUcius};
+    \node[draw, rounded corners, fill=white, font=\small] at (0.6,2.65) {vi vi vi 是野兽的编辑器！};
+    % 困在 Vim 里的人
+    \begin{scope}[shift={(5.4,0)}]
+      \filldraw[fill=black!85, draw=gray] (-0.9,0) rectangle (0.9,2.2);
+      \node[font=\ttfamily\tiny, text=green!70, anchor=north west, align=left] at (-0.85,2.15)
+        {\textasciitilde\\\textasciitilde\\\textasciitilde\\:q};
+      \draw (1.5,1.6) circle (0.22);
+      \draw (1.5,1.38) -- (1.5,0.6);
+      \draw (1.5,0.6) -- (1.3,0) (1.5,0.6) -- (1.7,0);
+      \draw (1.5,1.2) -- (1.1,1.6) (1.5,1.2) -- (1.9,1.6);
+      \node[font=\small, align=center] at (0.6,-0.4) {怎么退出？？};
+      \node[draw, rounded corners, fill=white, font=\small] at (1.3,2.65) {救命！我出不去了！};
+    \end{scope}
+    \draw[gray, line width=1pt] (-1.2,0) -- (7.6,0);
+  \end{tikzpicture}
+  \caption{编辑器之战}
+  \label{fig:editors}
+\end{figure}
+
+顺便说一句，这本书就是用 Vim 写的。至于作者有没有偷偷用过 Emacs，这里就不说了。
+
+\section{还有这些}
+
+圣战远不止这几场。再列几个有名的：
+
+\begin{itemize}
+  \item \textbf{\texttt{goto} 有没有害？}1968 年 Dijkstra 的《Go To 语句有害论》，吵了几十年。第~\ref{chap:c-structure}~章讲过，只往函数末尾跳的 \texttt{goto} 反而让代码更清楚。
+  \item \textbf{下标从 0 还是从 1 开始？}C 语言的数组下标从 0 开始，Fortran、Lua、MATLAB 从 1 开始。1982 年，Dijkstra 专门写了一篇短文《为什么编号应该从零开始》。
+  \item \textbf{\texttt{int *p} 还是 \texttt{int* p}？}前者强调“\texttt{*p} 是一个 \texttt{int}”，后者强调“\texttt{p} 的类型是 \texttt{int*}”。可是 \texttt{int* p, q;} 里，只有 \texttt{p} 是指针，\texttt{q} 是一个普通的 \texttt{int}——这是 \texttt{int *p} 派最爱举的例子。
+  \item \textbf{“尤达条件”。}为了防止把 \texttt{==} 写成 \texttt{=}（第~\ref{sec:logic}~节），有人把常量写在左边：\texttt{if (5 == n)}。写错成 \texttt{5 = n}，编译器会直接报错。反对者说，这读起来像《星球大战》里的尤达大师说话（“5 等于 n 吗”），有了编译器的警告，没必要这么别扭。
+  \item \textbf{换行符：CRLF 还是 LF？}老式的电传打字机要两个动作才能换行：回车（CR，把打印头移回行首）和换行（LF，把纸往上卷一行）。Windows 保留了两个字符 \texttt{\textbackslash r\textbackslash n}，Unix 只用一个 \texttt{\textbackslash n}。写这本书的时候，我们就被它坑过一次：有几个文件被存成了 CRLF，在 WSL 里运行脚本就报错了。
+  \item \textbf{微内核还是宏内核？}1992 年，操作系统教授、Minix 的作者 Andrew Tanenbaum 在新闻组里发帖，标题是《LINUX 已经过时了》，批评 Linux 把所有东西都放在一个大内核里，是一种落后的设计。刚刚写出 Linux 的大学生 Linus Torvalds 立刻反击。这场辩论载入了操作系统的历史，而 Linux 后来成了世界上用得最多的内核。
+  \item \textbf{GIF 怎么读？}这个图片格式的发明者 Steve Wilhite 在 2013 年领奖时，在屏幕上打出了一句话：读作“jif”（像花生酱的牌子 Jif）。可是大多数人还是读成“gif”（像 gift）。这场战争，连发明者本人都没能平息。
+\end{itemize}
+
+\section{怎样结束一场圣战}
+
+这些争论，大多没有对错，只有习惯和取舍。真正重要的，是第~\ref{chap:c-structure}~章说过的那句话：\textbf{和你周围的代码保持一致}。一个项目里，大家用同一种风格，比选哪一种风格重要得多。
+
+今天，很多项目干脆把风格交给工具决定：Go 语言自带 \texttt{gofmt}，所有 Go 代码一律按它的格式排版，没什么可吵的；C 和 C++ 有 \texttt{clang-format}，Python 有 \texttt{black}，项目里放一个配置文件，保存代码时自动排好。让机器来决定花括号放在哪里，人就可以去吵点别的了。
+
+比如，Vim 和 Emacs，到底哪个好？

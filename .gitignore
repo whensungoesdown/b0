@@ -53,3 +53,10 @@ code/ch05/*.exe
 /cover.aux
 /cover.log
 /cover.pdf
+code/appc/triangle_good
+code/appc/triangle_evil
+code/appc/admin
+code/appc/vote
+code/appc/anonymous
+code/appc/redact
+code/appc/inspect

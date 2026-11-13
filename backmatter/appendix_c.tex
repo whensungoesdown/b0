@@ -1,0 +1,228 @@
+\chapter{写坏代码，比写好代码还难}
+\label{app:evil-code}
+
+写出好代码很难：要正确，要清楚，要让别人一看就懂。可是你知道吗？故意写出“坏”代码，比写好代码还要难。
+
+这里说的“坏”，有两种。一种是\emph{难懂}：代码能运行，结果也对，可是没有人看得懂它在干什么。另一种是\emph{阴险}：代码看上去清清楚楚、规规矩矩，任谁检查都挑不出毛病，可它偷偷地在干坏事。世界上有两个比赛，专门比这两种“坏”。
+
+本附录的示例在 \texttt{code/appc/} 目录中。
+
+\section{国际 C 语言混乱代码大赛}
+
+\subsection{起因：两段烂代码}
+
+1984 年 3 月 23 日，美国国家半导体公司的两个程序员 Landon Curt Noll 和 Larry Bassel，各自对着一段烂代码发愁。Bassel 在修 Bourne shell（Unix 的命令行解释器）里的一个 bug——这个 shell 的作者喜欢 ALGOL 语言，用一大堆宏把 C 代码“伪装”成了 ALGOL 的样子；Noll 在修 BSD 上一个错误百出的 \texttt{finger} 程序。两个人碰巧同时走到走廊上透口气，交流起各自的遭遇，说出了一句话：“作者肯定是\emph{故意}写得这么烂的！”
+
+于是他们想：干脆办个比赛，看谁能\emph{故意}写出最烂的 C 程序。这就是\emph{国际 C 语言混乱代码大赛}（The International Obfuscated C Code Contest，IOCCC）\lazynote{obfuscate}{使变得模糊、难懂。obfuscated code 就是故意写得让人看不懂的代码。}。第一届的规则只有一句话：写一个最糟糕的、完整的 C 程序，不超过 512 个字节。一开始只在美国的网络新闻组里宣布，后来收到了国外的参赛作品，就在名字前面加上了“国际”二字。
+
+比赛一直办到了今天，最近一届是 2025 年。它的网站上列着比赛的宗旨，其中两条是：“以反讽的方式，说明程序风格的重要性”；“用反面的例子，强调清晰的代码有多么可贵”。还有一条：“为糟糕的 C 代码提供一个安全的去处。:-)”
+
+\subsection{第一届的 Hello, world}
+
+下面是 1984 年第一届比赛的一个获奖作品。它只有两行，猜猜它会打印什么？
+
+\codefile{code/appc/anonymous.c}{1984 年 IOCCC 的一个获奖作品（作者匿名）}{lst:anonymous}
+
+答案是：
+\inputminted[linenos=false]{text}{code/appc/out/anonymous.txt}
+
+这个程序里到处是陷阱：
+\begin{itemize}
+  \item 它自己定义了一个叫 \texttt{read} 的函数，里面却调用了 \texttt{write}——“读”就是“写”。
+  \item \texttt{'-'-'-'} 是一个字符减去它自己，等于 0；\texttt{'/'/'/'} 是一个字符除以它自己，等于 1。全篇没有一个数字 0 和 1，却到处都在用 0 和 1。
+  \item \texttt{i["]<i;++i){--i;}"]} 看上去像一段代码，其实是一个字符串。第~\ref{sec:heap-pointer}~节说过 \texttt{a[i]} 和 \texttt{*(a + i)} 是一回事，所以 \texttt{i["..."]} 和 \texttt{"..."[i]} 也是一回事。
+  \item 字符串 \texttt{"hello, world!"} 被一个反斜杠拆成了两行，第一行以 \texttt{hell} 结尾。
+\end{itemize}
+
+这个作品得的奖叫“不光彩奖”（Dishonorable Mention）。评委说，作者觉得写出这种垃圾太丢人了，要求匿名，评委答应了。直到今天，作者是谁仍然是个秘密。
+
+它用的是 1984 年的老式 C 语言，今天的编译器要这样编译才行（\texttt{-w} 关掉一大堆警告）：
+\begin{minted}[linenos=false]{text}
+gcc -m32 -std=gnu89 -w anonymous.c -o anonymous
+\end{minted}
+
+\subsection{自己动手“混乱”一下}
+
+我们也来试试。下面是一个打印三角形的程序，写得规规矩矩：
+
+\codefile{code/appc/triangle_good.c}{打印三角形：好好写的版本}{lst:tri-good}
+
+下面这个，功能一模一样，输出也一模一样：
+
+\codefile{code/appc/triangle_evil.c}{打印三角形：“混乱”的版本}{lst:tri-evil}
+
+它用了几个小把戏：把 \texttt{putchar} 藏进一个叫 \texttt{\_} 的宏里；变量名叫 \texttt{\_\_} 和 \texttt{\_\_\_}（两个和三个下划线，在 C 语言里都是合法的名字）；用 \texttt{42} 和 \texttt{10} 代替 \texttt{'*'} 和 \texttt{'\textbackslash n'}（它们的编码正好是 42 和 10）；把换行塞进了 \texttt{for} 循环的第三部分。这还只是入门水平，真正的 IOCCC 作品比这难懂一百倍。
+
+\subsection{几个有名的作品和故事}
+
+\paragraph{一个字节都没有的程序。}
+有一类程序叫“自我复制程序”（quine）\lazynote{quine}{运行后打印出自己源代码的程序。}：运行后，把自己的源代码原样打印出来。几乎每年都有人寄来“世界上最短的自我复制程序”，评委一看就知道还不够短。直到 1994 年，Szymon Rusinkiewicz 寄来了一个文件 \texttt{smr.c}——它是空的，0 个字节。一个空程序运行后什么也不打印，打印出来的正好是它自己的源代码：0 个字节。评委给了它“最恶劣地钻规则空子奖”（Worst Abuse of the Rules），然后修改了规则：以后的参赛作品，至少要比这个作品多一个字节。
+
+\paragraph{各种奇怪的奖项。}
+IOCCC 每年颁发的奖，名字都很有意思：“最恶劣地滥用 C 预处理器奖”“最难以预料的行为奖”“最佳单行程序奖”……获奖的作品里，有能下棋的、能模拟飞行的、能计算圆周率的，还有一个用小于号和大于号拼成的、看上去就是一个圆的程序，而它计算的正是圆周率。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    % 一团乱麻似的代码
+    \node[draw, fill=yellow!10, font=\ttfamily\scriptsize, align=left, inner sep=4pt] (code) at (0,0)
+      {\#define \_(x) putchar(x)\\int main(void)\{int \_\_=0,\_\_\_;\\for(;\_\_++<5;\_(10))\\for(\_\_\_=\_\_;\_\_\_--;\_(42));\}};
+    % 看代码的小人
+    \draw (3.4,0.5) circle (0.22);
+    \draw (3.4,0.28) -- (3.4,-0.5);
+    \draw (3.4,-0.5) -- (3.2,-1.1) (3.4,-0.5) -- (3.6,-1.1);
+    \draw (3.4,0.1) -- (3.1,0.4) -- (3.2,0.65);
+    \draw (3.4,0.1) -- (3.7,-0.15);
+    \node[font=\Large\bfseries, text=lazyred] at (3.75,0.95) {?};
+    \node[draw, rounded corners, fill=white, font=\small] at (4.9,1.7) {这……是 C 语言？};
+    \node[font=\scriptsize, gray] at (0,-1.1) {（它真的能编译，而且能运行）};
+  \end{tikzpicture}
+  \caption{读 IOCCC 作品的感觉}
+  \label{fig:ioccc}
+\end{figure}
+
+\section{阴险 C 语言大赛}
+
+\subsection{比“看不懂”更可怕的}
+
+IOCCC 的代码，人一看就知道有问题：谁会把正经程序写成那个样子？真正可怕的，是\emph{看上去完全没有问题}的代码。
+
+\emph{阴险 C 语言大赛}（The Underhanded C Contest）比的就是这个\lazynote{underhanded}{阴险的、暗中使坏的。}。它由美国宾汉姆顿大学的 Scott Craver 主办，自称是“混乱代码大赛的反面”：参赛的代码必须清楚、易读、看上去值得信任，却要偷偷完成一件坏事；而且，就算被人发现了，最好也能让人相信这只是一个无心的 bug——这叫“可以抵赖”。比赛的目的，是让人们明白：重要的程序，必须经过仔细的代码审查。
+
+每一届都有一个题目，比如：数选票时偷偷少算几票；处理金融交易时，偷偷刮走一点零头；把信息偷偷泄露给窃听者……
+
+\subsection{两个有名的冠军}
+
+\paragraph{2008 年：涂黑了，又没完全涂黑。}
+题目是：写一个“涂黑”图片的程序，把图片上指定的区域（比如照片里的人脸、文件上的机密信息）涂成黑色，但要偷偷让被涂掉的内容还能恢复出来。这一届收到了一百多个作品，冠军是 John Meacham。下面就是他的作品，加上注释也只有 50 多行（作者在博客上发表时省略了开头的 \texttt{\#include}，本书补上了前 6 行）：
+
+\codefile{code/appc/redact.c}{2008 年冠军：John Meacham 的涂黑程序}{lst:redact}
+
+它处理的是一种文本格式的图片（PPM 的 P3 格式）：文件开头写着宽、高和最大亮度，后面每个像素用三个十进制数表示红、绿、蓝，0 是最暗，255 是最亮。程序先原样抄下文件头（第 34、35 行），然后一行一行地读（第 43 行），再一个字符一个字符地看（第 44 行）：
+\begin{itemize}
+  \item 遇到数字字符（第 45 行），如果它是一个新数的开头，就把位置 \texttt{x} 加一，满了一行就换到下一行（第 46--51 行）。变量 \texttt{ws} 记着“现在是不是在一个数的中间”。
+  \item 如果这个位置在要涂黑的矩形里（第 52 行），就输出一个字符 \texttt{'0'}（第 53 行），否则原样输出。
+  \item 空格、换行这些不是数字的字符，原样输出（第 57、58 行）。
+\end{itemize}
+
+漏洞就在第 53 行：它把\emph{每一个数字字符}换成了 \texttt{'0'}，而不是把\emph{每一个数}换成 \texttt{0}。拿一张 4 列、3 行的小图片试一试，把第二行涂黑：
+\begin{minted}[linenos=false]{text}
+$ ./redact secret.ppm 0 0 4 2
+\end{minted}
+\inputminted[linenos=false]{text}{code/appc/out/redacted.ppm}
+
+原来是 \texttt{7 7 7}（很暗）的地方变成了 \texttt{0 0 0}，原来是 \texttt{60 60 60} 的地方变成了 \texttt{00 00 00}，原来是 \texttt{255}（最亮）的地方变成了 \texttt{000}。在看图软件里，它们全都是黑的，看不出任何区别；可是打开文件数一数 0 的个数，就知道原来每个数是一位、两位还是三位，也就是原来大致有多亮。涂黑最常用在白底黑字的文件上，那里的每个数不是 0 就是 255，被涂掉的字可以\emph{一个不差}地恢复出来。
+
+（细心的读者会发现，最后一个数 \texttt{255} 没有被涂黑。这是因为第 48 行的换行判断让 \texttt{x} 和 \texttt{y} 在每一行的末尾差了一个，这是原作本来就有的一个小毛病，和要偷偷干的坏事无关。）
+
+为什么要一个字符一个字符地处理，而不用更自然的 \texttt{scanf("\%d \%d \%d", ...)} 一次读一个数？Meacham 在博客里说，这正是他最得意的地方：如果被人质问，他就回答，这是为了避开 \texttt{gets} 和 \texttt{fgets} 那些出了名的缓冲区溢出的坑（第 40 行的注释“fixed buffer size to avoid overflow”就是在为此铺垫）。一个看上去是为了\emph{安全}而写的做法，恰恰就是漏洞本身。评委称赞它是这个比赛精神的绝佳范例：“极其简单、天真、一目了然——而且是错的。”
+
+\paragraph{2015 年：核弹头检查。}
+这一届和一个防止核扩散的组织合作，题目很严肃：两个国家达成了核裁军协议，要用程序比较一个弹头的伽马射线能谱和一个标准能谱，只输出“是”或“否”，判断它是不是真的核弹头。参赛者要让程序在某种可以人为制造的条件下，把一个假弹头也判成“是”——这样，一个国家就可以交出假弹头，偷偷留下真的。
+
+冠军是 Linus Åkesson，他的作品只有三个文件，66 行。先看头文件：
+
+\codefile{code/appc/match.h}{2015 年冠军：match.h}{lst:match-h}
+
+再看主要的逻辑。\texttt{match} 做两项检查：先比较两份能谱的总量（第 40 行），假弹头的核材料太少就直接判“否”；然后把两份能谱分别平滑、求差分、再平滑（\texttt{preprocess}，第 30--35 行），最后比较它们的“形状”像不像（第 43 行）：
+
+\codefile{code/appc/match.c}{2015 年冠军：match.c}{lst:match-c}
+
+最后一个文件计算两份能谱的相似程度：把它们看成两个向量，各自除以自己的长度（\texttt{normalize}），再求点积（\texttt{dot\_product}）。两个向量越相似，结果越接近 1：
+
+\codefile{code/appc/spectral_contrast.c}{2015 年冠军：spectral\_contrast.c}{lst:spectral}
+
+三个文件，每一行看上去都无可挑剔。秘密藏在两个文件开头的 \texttt{\#include} 里：
+\begin{itemize}
+  \item \texttt{match.c} 包含了 \texttt{match.h}，那里写着 \texttt{typedef double float\_t;}，所以在 \texttt{match.c} 看来，\texttt{float\_t} 是 8 个字节的 \texttt{double}。
+  \item \texttt{spectral\_contrast.c} 只包含了 \texttt{<math.h>}。标准库的 \texttt{math.h} 里\emph{本来就}定义了一个 \texttt{float\_t}，在 x86-64 上，它是 4 个字节的 \texttt{float}。
+\end{itemize}
+两个文件是分开编译的，编译器各看各的，谁也不知道对方的 \texttt{float\_t} 和自己不一样，所以一声不吭。可是 \texttt{match} 把一个装着 8 字节数的数组交给 \texttt{spectral\_contrast}，后者却按 4 字节一个数来读（第~\ref{sec:heap-pointer}~节说过，指针加一走多远，取决于元素的类型）。于是：
+\begin{itemize}
+  \item 数组只被读了\emph{前一半}：\texttt{length} 个 4 字节的数，正好是前 \texttt{length/2} 个 8 字节的数。能谱的后一半，根本没有参加比较。
+  \item 每一个 8 字节的 \texttt{double}，被拆成两个 4 字节来读，读出来的是一个被“压扁”了的、和原来的大小几乎没有关系的值。大峰和小峰被压得差不多高，形状像不像，几乎看不出来了。
+\end{itemize}
+
+作弊的办法也就有了：假弹头里只放一点点真的核材料，让能谱的前一半“形状”对得上；再在能谱的后一半加一个很强的信号，让总量的检查（第 40 行，这一步是在 \texttt{match.c} 里做的，没有被骗）也能通过。本书写了一个小程序来试一试（\texttt{code/appc/inspect.c}，不是原作）：假弹头只有标准能谱 3\% 的核材料，再在后一半放一个不相干的强峰。运行结果是：
+\inputminted[linenos=false]{text}{code/appc/out/inspect.txt}
+
+假弹头通过了！如果让两个文件对 \texttt{float\_t} 的理解一致——比如把 \texttt{spectral\_contrast.c} 开头的 \texttt{\#include <math.h>} 换成 \texttt{\#include "match.h"}（再自己声明一下 \texttt{sqrt}）——假弹头就会被识破，判为“不通过”。有意思的是，如果两个头文件\emph{同时}包含，编译器反而会报错：\texttt{float\_t} 被定义了两次，而且类型不一样。作者正是小心地让每个文件只包含其中一个。
+
+评委说，除了这一处类型上的混淆，这段代码“没有任何不寻常、可疑、古怪或者与众不同的地方”，就是教科书式的“预处理再求相关”，因此“难以置信地无辜”。就算被发现了，也很容易推说是不小心：谁会想到 \texttt{math.h} 里也有一个 \texttt{float\_t} 呢？原作的说明文档（含全部代码）在 \url{https://www.underhanded-c.org/one.pdf}。
+
+\subsection{我们也来阴险一下}
+
+下面这个函数检查一个用户是不是管理员。请仔细看，它有什么问题？
+
+\codefile{code/appc/admin.c}{检查管理员：看上去很正常}{lst:admin}
+
+\inputminted[linenos=false]{text}{code/appc/out/admin.txt}
+
+所有人都成了管理员！问题出在第 11、12 两行：\texttt{if} 后面没有花括号，它只管紧跟着的\emph{一条}语句 \texttt{printf}；下一行的 \texttt{admin = 1;} 虽然缩进得和 \texttt{printf} 一样，却根本不归 \texttt{if} 管，每次都会执行。缩进骗了眼睛，编译器可不看缩进。
+
+再看一个数选票的程序：
+
+\codefile{code/appc/vote.c}{数选票：猫和狗}{lst:vote}
+
+\inputminted[linenos=false]{text}{code/appc/out/vote.txt}
+
+8 张票，狗明明得了 5 张，结果全算给了猫。罪魁祸首是第 12 行的 \texttt{ballots[i] = 1}：少写了一个等号，“判断等不等于 1”变成了“把 1 放进去”（第~\ref{sec:logic}~节警告过）。它不但让每张票都“投给了猫”，还把选票本身也改掉了，事后连重新数一遍都不行。
+
+\subsection{这些不只是游戏}
+
+这两个把戏，在真实世界里都发生过。
+
+\paragraph{苹果的“goto fail”。}
+2014 年，苹果公司发布了一个紧急的安全更新。问题出在 iOS 和 macOS 检查 HTTPS 证书的代码里，一行 \texttt{goto fail;} 被重复写了两遍：
+\begin{minted}[linenos=false]{c}
+if ((err = SSLHashSHA1.update(&hashCtx, &signedParams)) != 0)
+    goto fail;
+    goto fail;
+\end{minted}
+第二个 \texttt{goto fail;} 和 \texttt{admin.c} 里的 \texttt{admin = 1;} 一样：缩进看上去归 \texttt{if} 管，其实每次都会执行，于是后面最关键的那一步签名检查被整个跳过了，而这时表示错误的变量还是 0，表示“一切正常”。结果，攻击者可以冒充任何一个 HTTPS 网站。没有人知道这是不小心复制错了，还是有人故意为之。
+
+\paragraph{2003 年的 Linux 后门。}
+2003 年 11 月，有人偷偷修改了 Linux 内核源代码的一个副本，在 \texttt{wait4} 系统调用里加了两行：
+\begin{minted}[linenos=false]{c}
+if ((options == (__WCLONE|__WALL)) && (current->uid = 0))
+        retval = -EINVAL;
+\end{minted}
+看上去像是在检查“当前用户是不是超级用户”（\texttt{uid == 0}），其实是\emph{把}当前用户\emph{变成}超级用户（\texttt{uid = 0}）。任何一个普通程序，只要用两个特殊的参数调用 \texttt{wait4}，就能悄悄获得最高权限。作者还特意多加了一层括号，因为那样编译器就不会给出警告了。幸好，这次修改没有对应的审批记录，很快被发现了。至今没有人知道是谁干的。
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[line width=0.8pt]
+    % 一行干净整齐的代码，后面藏着一个小恶魔
+    \node[draw, fill=green!8, font=\ttfamily\small, inner sep=5pt] (c) at (0,0)
+      {if (user->uid = 0)};
+    % 小恶魔：从代码框的右上角探出头来
+    \begin{scope}[shift={(1.9,0.75)}, scale=1.6]
+      \fill[red!70] (0,0) circle (0.22);
+      \fill[red!70] (-0.15,0.17) -- (-0.2,0.43) -- (-0.05,0.21) -- cycle;
+      \fill[red!70] (0.15,0.17) -- (0.2,0.43) -- (0.05,0.21) -- cycle;
+      \fill[white] (-0.07,0.03) circle (0.05) (0.07,0.03) circle (0.05);
+      \draw[white, line width=0.6pt] (-0.09,-0.09) arc[start angle=200, end angle=340, radius=0.1];
+    \end{scope}
+    \node[draw, rounded corners, fill=white, font=\small, anchor=west] at (2.4,1.25) {嘿嘿，少了一个等号……};
+    \node[font=\scriptsize, gray] at (0,-0.6) {（看上去很正常，对吧？）};
+  \end{tikzpicture}
+  \caption{阴险的代码}
+  \label{fig:underhanded}
+\end{figure}
+
+\section{怎样对付坏代码}
+
+本附录的两个小把戏，有一个共同点：编译器其实能发现它们。我们的 Makefile 故意没有加 \texttt{-Wall}，加上以后，\texttt{gcc} 会这样说：
+\inputminted[linenos=false, fontsize=\scriptsize]{text}{code/appc/out/wall.txt}
+
+第一条说：这个 \texttt{if} 并不管它下面缩进的那几行，缩进是骗人的（misleading indentation）；第二条就是第~\ref{sec:logic}~节见过的那个警告。
+
+所以，对付坏代码的办法，其实就是本书一路上说过的那些好习惯：
+\begin{itemize}
+  \item 编译时打开警告（\texttt{-Wall -Wextra}），而且认真看每一条；
+  \item \texttt{if} 后面，就算只有一条语句，也写上花括号；
+  \item 写测试，让程序自动检查结果对不对——本书每一章的 \texttt{make test} 都在做这件事；
+  \item 请别人帮你看代码。阴险 C 语言大赛告诉我们：一个人看不出来的问题，两个人、三个人仔细看，也许就看出来了。
+\end{itemize}
+
+写好代码很难，写坏代码更难。好在，看穿坏代码的本领，是可以学的。
