@@ -1,13 +1,5 @@
-% !TEX program = xelatex
-% 编译：latexmk（已在 .latexmkrc 中设为 XeLaTeX），或在 Vim 中按 \ll
-\documentclass[
-  UTF8,
-  a4paper,
-  twoside,        % 双面排版；只在屏幕上阅读可改为 oneside
-  openright,      % 每章从右页（奇数页）开始；改为 openany 则不留空白页
-  zihao=-4,       % 正文小四号字
-  fontset=fandol, % Linux 下可用的开源中文字体；见 README 中的“字体”一节
-]{ctexbook}
+% 中英文两个版本共用的导言区。main-zh.tex、main-en.tex 先 \input 它，再 \input 各自的语言文件
+% （style/lang-zh.tex、style/lang-en.tex），语言文件里放书名、章名、题注名、引言、页脚这些随语言变的东西。
 
 % ---------- 页面 ----------
 % 版心较窄，外侧留出 45 mm 宽的一栏放页边注（\lazynote、\lazyhint，见 style/lazy-preamble.tex）
@@ -45,7 +37,6 @@
   % 代码里中英文之间不要自动加空格，否则 printf("你好") 会显示成 printf(" 你好")
   formatcom=\xeCJKsetup{CJKecglue={}},
 }
-\SetupFloatingEnvironment{listing}{name=代码, listname=代码清单, within=chapter}
 
 % 带题注的代码文件：\codefile[语言]{文件}{题注}{标签}
 % 不使用浮动体，长代码可以跨页；语言默认为 c
@@ -63,57 +54,17 @@
   \par\addvspace{\medskipamount}%
 }
 
-% 定理环境，按章编号
-\newtheorem{theorem}{定理}[chapter]
-\newtheorem{definition}[theorem]{定义}
-\newtheorem{lemma}[theorem]{引理}
-\renewcommand{\proofname}{证明}
-
 % ---------- 参考文献（GB/T 7714-2015 顺序编码制） ----------
 \usepackage[backend=biber, style=gb7714-2015]{biblatex}
 \addbibresource{refs.bib}
 
-% ---------- 超链接（放在最后加载） ----------
 % ---------- 版式：页眉、页脚、章首页、节标题 ----------
 \input{style/lazy-preamble}
 \input{style/lazy-on}
 
+% ---------- 超链接（放在最后加载） ----------
 % bookmarksnumbered：PDF 书签（阅读器侧边栏的目录）里也带上“第一章”、“1.1”这样的编号
 \usepackage[hidelinks, unicode, bookmarksnumbered]{hyperref}
 
-% ---------- 书籍信息 ----------
-\title{教孩子学编程（C Language: A Lazy Approach）}
 \author{whensungoesdown}
 \date{\today}
-\hypersetup{pdftitle={教孩子学编程（C Language: A Lazy Approach）}, pdfauthor={whensungoesdown}}
-
-\begin{document}
-
-\frontmatter
-% 封面：内容在 frontmatter/cover.tex，书名、作者也在那里改
-\begin{titlepage}
-  \input{frontmatter/cover}
-\end{titlepage}
-\thispagestyle{empty}\null\clearpage   % 封面的背面：空白页，不印页码
-\input{frontmatter/dedication}         % 献词
-\include{frontmatter/preface}
-\tableofcontents
-\listoflistings
-
-\mainmatter
-\include{chapters/ch01}
-\include{chapters/ch02}
-\include{chapters/ch03}
-\include{chapters/ch04}
-\include{chapters/ch05}
-\include{chapters/ending}
-
-\appendix
-\include{backmatter/appendix}
-\include{backmatter/appendix_b}
-\include{backmatter/appendix_c}
-
-\backmatter
-\printbibliography[heading=bibintoc, title={参考文献}]
-
-\end{document}

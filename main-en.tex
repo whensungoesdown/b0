@@ -1,0 +1,45 @@
+% !TEX program = xelatex
+% 英文版。编译：latexmk（中英文两版一起编译，见 .latexmkrc），或在 Vim 中按 \ll
+% 两个版本共用的设置在 style/book.tex 里，英文版特有的在 style/lang-en.tex 里。
+% 还没翻译的部分先用中文版占位（下面注明了“占位”），翻译好一章，就把路径从 zh/ 改成 en/。
+\documentclass[
+  UTF8,
+  a4paper,
+  twoside,
+  openright,
+  zihao=-4,
+  fontset=fandol,
+]{ctexbook}
+
+\input{style/book}
+\input{style/lang-en}
+
+\begin{document}
+
+\frontmatter
+\begin{titlepage}
+  \input{frontmatter/cover}
+\end{titlepage}
+\thispagestyle{empty}\null\clearpage
+\input{frontmatter/dedication}
+\input{frontmatter/zh/preface}           % 占位
+\tableofcontents
+\listoflistings
+
+\mainmatter
+\input{chapters/en/ch01}
+\input{chapters/zh/ch02}                 % 占位
+\input{chapters/zh/ch03}                 % 占位
+\input{chapters/zh/ch04}                 % 占位
+\input{chapters/zh/ch05}                 % 占位
+\input{chapters/zh/ending}               % 占位
+
+\appendix
+\input{backmatter/zh/appendix}           % 占位
+\input{backmatter/zh/appendix_b}         % 占位
+\input{backmatter/zh/appendix_c}         % 占位
+
+\backmatter
+\printbibliography[heading=bibintoc, title={Bibliography}]
+
+\end{document}

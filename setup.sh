@@ -35,4 +35,4 @@ else
 fi
 
 echo
-echo "完成。试着编译：latexmk   （PDF 在 build/main.pdf）"
+echo "完成。试着编译：latexmk   （PDF 在 build/main-zh.pdf 和 build/main-en.pdf）"

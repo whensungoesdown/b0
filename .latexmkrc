@@ -11,18 +11,15 @@ $out_dir = 'build';
 # 不要再在终端里运行 latexmk，否则两个进程会同时改写 build/ 中的文件，出现 biber 报
 # “.bcf is malformed”、xdvipdfmx 报“File ended prematurely”等莫名其妙的错误。
 
-# \include 的文件在子目录中时，XeLaTeX 要在 build/ 下写同名子目录里的 .aux，
-# 但它不会自己创建这些子目录，这里预先建好
-use File::Path ();
-File::Path::make_path(map { "$out_dir/$_" } qw(frontmatter chapters backmatter));
-
 # 代码高亮用 minted，它要调用辅助程序 latexminted。
 # tools/latexminted 修复了 Ubuntu 版本在 Python 3.14 下的崩溃，放到 PATH 最前面。
 use Cwd ();
 $ENV{PATH} = Cwd::getcwd() . "/tools:$ENV{PATH}";
 
-# 只编译主文件
-@default_files = ('main.tex');
+# 中英文两版：build/main-zh.pdf、build/main-en.pdf。只编译一个版本：latexmk main-zh.tex
+# 各章用 \input 而不是 \include：英文版还没翻译的章先用中文版占位，两个版本 \include 同一个文件时，
+# 会争着改写 build/ 下同一个 .aux。
+@default_files = ('main-zh.tex', 'main-en.tex');
 
 # latexmk -c 时一并清理这些文件
 $clean_ext = 'bbl run.xml synctex.gz xdv';

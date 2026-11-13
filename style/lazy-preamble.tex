@@ -3,7 +3,7 @@
 %   章首页：左上角一个红色方块，里面是白色的大号章号；一条竖线；
 %           右边是黑体的章标题和本章各节的小目录，左下是一段引言
 %   页眉：  偶数页“页码  第一章  章标题”，奇数页“节标题  页码”，下面一条红线
-%   页脚：  偶数页英文书名，奇数页中文书名
+%   页脚：  中文版偶数页英文书名、奇数页中文书名；英文版偶数页书名、奇数页作者
 %   节标题：红底白字的编号方块，后面是黑体标题
 \usepackage{fancyhdr}
 \usepackage{etoc}
@@ -11,61 +11,32 @@
 
 \definecolor{lazyred}{RGB}{190,30,45}          % 和封面的红色一样
 \newfontfamily\lazysans{texgyreheros}[
-  Extension=.otf, UprightFont=*-regular, BoldFont=*-bold,
+  Extension=.otf, Ligatures=TeX, UprightFont=*-regular, BoldFont=*-bold,
   ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
 \setCJKfamilyfont{lazyhei}{FandolHei-Regular}[Extension=.otf, BoldFont=FandolHei-Bold]
 \setCJKfamilyfont{lazykai}{FandolKai-Regular}[Extension=.otf]
 \newcommand\lazyfont{\lazysans\CJKfamily{lazyhei}}   % 标题用的无衬线字体：英文 Heros，中文黑体
 
 % 每章章首页的引言：\lazyquote{章号}{中文}{原文}{出处}，附录的章号是 A、B……
+% 各章的引言写在语言文件里（style/lang-zh.tex、style/lang-en.tex）；英文版的“中文”一项留空，章首页就只印原文。
 \newcommand\lazyquote[4]{%
   \expandafter\def\csname lazyquoteA#1\endcsname{#2}%
   \expandafter\def\csname lazyquoteB#1\endcsname{#3}%
   \expandafter\def\csname lazyquoteC#1\endcsname{#4}}
-\lazyquote{1}{学习一门新的程序设计语言的唯一途径，就是用它来编写程序。}
-             {The only way to learn a new programming language is by writing programs in it.}
-             {Brian W. Kernighan、Dennis M. Ritchie，\\\emph{The C Programming Language}，1978}
-\lazyquote{2}{程序是写给人读的，只是顺便让机器执行。}
-             {Programs must be written for people to read, and only incidentally for machines to execute.}
-             {Harold Abelson、Gerald Jay Sussman，\\\emph{Structure and Interpretation of Computer Programs}，1985}
-\lazyquote{3}{人人都知道，调试一个程序比写它难一倍。所以，如果你写程序时已经用尽了聪明才智，又该怎么去调试它呢？}
-             {Everyone knows that debugging is twice as hard as writing a program in the first place.
-              So if you're as clever as you can be when you write it, how will you ever debug it?}
-             {Brian W. Kernighan、P. J. Plauger，\\\emph{The Elements of Programming Style}，第 2 版，1978}
-\lazyquote{4}{计算机科学中的所有问题，都可以通过再加一层间接来解决。}
-             {All problems in computer science can be solved by another level of indirection.}
-             {David J. Wheeler\\（Butler Lampson 在图灵奖演讲中引用）}
-\lazyquote{5}{这就是 Unix 哲学：写只做一件事、并且把它做好的程序；写能互相协作的程序。}
-             {This is the Unix philosophy: Write programs that do one thing and do it well.
-              Write programs to work together.}
-             {Doug McIlroy，见 Peter H. Salus，\\\emph{A Quarter Century of Unix}，1994}
-\lazyquote{A}{我在做一个（免费的）操作系统（只是业余爱好，不会像 GNU 那样又大又专业），用在 386（486）AT 兼容机上。}
-             {I'm doing a (free) operating system (just a hobby, won't be big and professional like gnu)
-              for 386(486) AT clones.}
-             {Linus Torvalds，新闻组 comp.os.minix，\\1991 年 8 月 25 日}
-\lazyquote{B}{这是一次阻止战争的尝试。我希望还不算太晚，希望和平能够——也许是奇迹般地——重新降临。}
-             {This is an attempt to stop a war. I hope it is not too late and that somehow,
-              magically perhaps, peace will prevail again.}
-             {Danny Cohen，\emph{On Holy Wars and a Plea for Peace}，\\1980 年 4 月 1 日}
-\lazyquote{C}{任何一个傻瓜都能写出计算机看得懂的代码。好的程序员写的是人看得懂的代码。}
-             {Any fool can write code that a computer can understand.
-              Good programmers write code that humans can understand.}
-             {Martin Fowler，\\\emph{Refactoring}，1999}
 
-% 页眉、页脚
+% 页眉、页脚。页脚的文字由语言文件定义：\lazyfooteven、\lazyfooterodd（正文页），\lazyfooteropener（章首页）
 \fancypagestyle{lazy}{%
   \fancyhf{}%
   \fancyhead[LE]{\lazyfont\bfseries\thepage\hspace{1.6em}\leftmark}%
   \fancyhead[RO]{\lazyfont\bfseries\rightmark\hspace{1.6em}\thepage}%
-  \fancyfoot[LE]{\lazysans\footnotesize\color{gray}C Language: A Lazy Approach}%
-  \fancyfoot[RO]{\CJKfamily{lazyhei}\footnotesize\color{gray}教猫狗学编程}%
+  \fancyfoot[LE]{\lazyfont\footnotesize\color{gray}\lazyfooteven}%
+  \fancyfoot[RO]{\lazyfont\footnotesize\color{gray}\lazyfooterodd}%
   \renewcommand\headrule{{\color{lazyred}\hrule height 0.8pt}\vskip-0.8pt}%
   \renewcommand\footrulewidth{0pt}}
 % 章首页：没有页眉，页脚居中写书名
 \fancypagestyle{lazyopener}{%
   \fancyhf{}%
-  \fancyfoot[C]{\lazysans\footnotesize\color{gray}C Language: A Lazy Approach\quad
-                \CJKfamily{lazyhei}教猫狗学编程}%
+  \fancyfoot[C]{\lazyfont\footnotesize\color{gray}\lazyfooteropener}%
   \renewcommand\headrule{}}
 
 % 页边注：书页外侧留出一栏空白，放术语解释和小提示（仿照 COD 的做法）
@@ -123,12 +94,16 @@
     \node[anchor=north west, inner sep=0pt, text width=70mm, align=left]
       at ($(title.south west) + (0,-6mm)$) {\lazyminitoc};
     % 引言
-    \ifcsname lazyquoteA\thechapter\endcsname
+    \ifcsname lazyquoteB\thechapter\endcsname
       \node[anchor=north east, inner sep=0pt, text width=68mm, align=flush right]
         at ($(P) + (106mm,-168mm)$)
-        {{\CJKfamily{lazykai}\large\csname lazyquoteA\thechapter\endcsname\par}
-         \vspace{2mm}
-         {\itshape\small\csname lazyquoteB\thechapter\endcsname\par}
+        {\expandafter\ifx\csname lazyquoteA\thechapter\endcsname\empty
+           {\itshape\large\csname lazyquoteB\thechapter\endcsname\par}%   只有原文：原文用大字
+         \else
+           {\CJKfamily{lazykai}\large\csname lazyquoteA\thechapter\endcsname\par}
+           \vspace{2mm}
+           {\itshape\small\csname lazyquoteB\thechapter\endcsname\par}%
+         \fi
          \vspace{3mm}
          {\lazyfont\bfseries\scriptsize\csname lazyquoteC\thechapter\endcsname\par}};
     \fi
@@ -142,9 +117,9 @@
     \etocsettocstyle{}{}%
     \etocsetstyle{section}{}%
       {}%
-      {\noindent\makebox[2.4em][l]{\lazyfont\bfseries\small\color{lazyred}\etocnumber}%
-       \parbox[t]{\dimexpr\linewidth-2.4em}{\raggedright\lazyfont\bfseries\small\etocname
-         \nobreak\hspace{0.6em}{\mdseries\color{gray}\etocpage}}\par\vspace{1.2mm}}%
+      {{\lazyfont\bfseries\small\raggedright\hangindent=2.4em\hangafter=1
+        \noindent\makebox[2.4em][l]{\color{lazyred}\etocnumber}\etocname
+        \nobreak\hspace{0.6em}{\mdseries\color{gray}\etocpage}\par}\vspace{1.2mm}}%   % 标题太长时折行，悬挂缩进
       {}%
     \localtableofcontents
   \endgroup}

@@ -1,0 +1,45 @@
+% !TEX program = xelatex
+% 中文版。编译：latexmk（中英文两版一起编译，见 .latexmkrc），或在 Vim 中按 \ll
+% 两个版本共用的设置在 style/book.tex 里，中文版特有的在 style/lang-zh.tex 里。
+\documentclass[
+  UTF8,
+  a4paper,
+  twoside,        % 双面排版；只在屏幕上阅读可改为 oneside
+  openright,      % 每章从右页（奇数页）开始；改为 openany 则不留空白页
+  zihao=-4,       % 正文小四号字
+  fontset=fandol, % Linux 下可用的开源中文字体；见 README 中的“字体”一节
+]{ctexbook}
+
+\input{style/book}
+\input{style/lang-zh}
+
+\begin{document}
+
+\frontmatter
+% 封面：内容在 frontmatter/cover.tex，书名、作者也在那里改
+\begin{titlepage}
+  \input{frontmatter/cover}
+\end{titlepage}
+\thispagestyle{empty}\null\clearpage   % 封面的背面：空白页，不印页码
+\input{frontmatter/dedication}         % 献词（中英文两版共用）
+\input{frontmatter/zh/preface}
+\tableofcontents
+\listoflistings
+
+\mainmatter
+\input{chapters/zh/ch01}
+\input{chapters/zh/ch02}
+\input{chapters/zh/ch03}
+\input{chapters/zh/ch04}
+\input{chapters/zh/ch05}
+\input{chapters/zh/ending}
+
+\appendix
+\input{backmatter/zh/appendix}
+\input{backmatter/zh/appendix_b}
+\input{backmatter/zh/appendix_c}
+
+\backmatter
+\printbibliography[heading=bibintoc, title={参考文献}]
+
+\end{document}

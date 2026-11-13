@@ -1,0 +1,58 @@
+% 英文版特有的设置：章名、书名、题注名、定理名、各章引言、页脚、封面。由 main-en.tex 在 style/book.tex 之后 \input。
+% 中文版的对应设置在 style/lang-zh.tex，两个文件里的条目一一对应，改了一个，记得看看另一个。
+
+\title{C Language: A Lazy Approach}
+\hypersetup{pdftitle={C Language: A Lazy Approach}, pdfauthor={whensungoesdown}}
+
+% 文档类仍是 ctexbook（全书的版式、中文字体都靠它），这里把它的“第一章”“目录”“图”“表”等换成英文
+\ctexset{
+  contentsname   = Contents,
+  listfigurename = List of Figures,
+  listtablename  = List of Tables,
+  figurename     = Figure,
+  tablename      = Table,
+  bibname        = Bibliography,
+  indexname      = Index,
+  appendixname   = Appendix,
+  chapter  = {name = {Chapter~,},  number = \arabic{chapter}},
+  appendix = {name = {Appendix~,}, number = \Alph{chapter}},
+}
+
+\SetupFloatingEnvironment{listing}{name=Listing, listname=List of Listings, within=chapter}
+
+% 定理环境，按章编号
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{lemma}[theorem]{Lemma}
+\renewcommand{\proofname}{Proof}
+
+% 页脚：偶数页书名，奇数页作者，章首页只写书名
+\newcommand\lazyfooteven{C Language: A Lazy Approach}
+\newcommand\lazyfooterodd{whensungoesdown}
+\newcommand\lazyfooteropener{C Language: A Lazy Approach}
+
+% 封面上不印中文书名（frontmatter/cover.tex 里用 \providecommand 定义，这里先定义为空）
+\newcommand\CoverZhTitle{}
+
+% 每章章首页的引言：\lazyquote{章号}{}{原文}{出处}，第二项（中文）留空
+\lazyquote{1}{}{The only way to learn a new programming language is by writing programs in it.}
+             {Brian W. Kernighan and Dennis M. Ritchie,\\\emph{The C Programming Language}, 1978}
+\lazyquote{2}{}{Programs must be written for people to read, and only incidentally for machines to execute.}
+             {Harold Abelson and Gerald Jay Sussman,\\\emph{Structure and Interpretation of Computer Programs}, 1985}
+\lazyquote{3}{}{Everyone knows that debugging is twice as hard as writing a program in the first place.
+              So if you're as clever as you can be when you write it, how will you ever debug it?}
+             {Brian W. Kernighan and P. J. Plauger,\\\emph{The Elements of Programming Style}, 2nd ed., 1978}
+\lazyquote{4}{}{All problems in computer science can be solved by another level of indirection.}
+             {David J. Wheeler\\(quoted by Butler Lampson in his Turing Award lecture)}
+\lazyquote{5}{}{This is the Unix philosophy: Write programs that do one thing and do it well.
+              Write programs to work together.}
+             {Doug McIlroy, in Peter H. Salus,\\\emph{A Quarter Century of Unix}, 1994}
+\lazyquote{A}{}{I'm doing a (free) operating system (just a hobby, won't be big and professional like gnu)
+              for 386(486) AT clones.}
+             {Linus Torvalds, newsgroup comp.os.minix,\\August 25, 1991}
+\lazyquote{B}{}{This is an attempt to stop a war. I hope it is not too late and that somehow,
+              magically perhaps, peace will prevail again.}
+             {Danny Cohen, \emph{On Holy Wars and a Plea for Peace},\\April 1, 1980}
+\lazyquote{C}{}{Any fool can write code that a computer can understand.
+              Good programmers write code that humans can understand.}
+             {Martin Fowler,\\\emph{Refactoring}, 1999}

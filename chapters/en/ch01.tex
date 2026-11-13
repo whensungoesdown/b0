@@ -1,0 +1,302 @@
+%! TeX root = ../../main-en.tex
+% 译自: chapters/zh/ch01.tex @ 12b16dd:chapters/ch01.tex
+\chapter{It Starts with Hello, world}
+\label{chap:hello}
+
+Almost every book on C begins with the same program:
+\codefile{code/ch01/hello.c}{The simplest C program}{lst:hello}
+
+It is only seven lines long. Everybody has written it, and there seems to be nothing to say about it. But it is actually a door. Between the moment you press Enter to compile it and the moment that line of text appears on the screen, it passes through the preprocessor, the compiler, the assembler, the linker and the operating system, and only then does the CPU execute its instructions, one at a time. This book is about the very bottom of that road: how a CPU is built. Before we set off, let us walk the whole road once, from one end to the other.
+
+The examples for this chapter are in the \texttt{code/ch01/} directory. Run \texttt{make} in a WSL or Linux terminal and you can reproduce every file in this chapter, step by step. The output shown in the book comes from Ubuntu on x86-64 with GCC 15.2. With a different compiler version the details will differ, but the overall picture stays the same.
+
+C has several versions of its international standard. All the code in this book follows \emph{C99}, the version published in 1999, and compiles with any common C compiler.
+
+\section{Reading It Line by Line}
+
+\paragraph{\texttt{\#include <stdio.h>}}
+Lines starting with \texttt{\#} are not C statements; they are commands for the \emph{preprocessor}.\lazynote{Preprocessor}{The program that processes the source code before the real compilation: it expands \texttt{\#include}, replaces macros and strips comments.} \texttt{\#include} means something very plain: copy the contents of the file \texttt{stdio.h} right here, word for word. The angle brackets say ``look in the system header directories''. If you write \texttt{\#include "stdio.h"} instead, the directory of the current source file is searched first.
+
+\texttt{stdio.h} is short for ``standard input/output header''. We need it because we are about to call \texttt{printf}.
+
+\paragraph{\texttt{int main(void)}}
+\texttt{main} is where the program starts---at least as far as C is concerned. \texttt{int} says that it returns an integer, and \texttt{void} says that it takes no arguments. The program begins with the first statement of \texttt{main}. Later we will see that some other code actually runs before \texttt{main}.
+
+\paragraph{\texttt{printf("Hello, world!\textbackslash n");}}
+This calls the function \texttt{printf} to print a string on the screen. \texttt{\textbackslash n} is the newline character. Note that \texttt{printf} is not part of the C language itself; it is an ordinary function in the C standard library. The C language has no input or output statements at all.
+
+\paragraph{\texttt{return 0;}}
+\texttt{main} returns 0, telling whoever called it that the program ended normally.\lazyhint{\texttt{\$?} is the shell's record of ``the exit status of the last program''. 0 means success; any other number means something went wrong.} After running the program in a terminal, type \texttt{echo \$?} and you will see that 0.
+
+\section{What Is in a Header File}
+\label{sec:stdio-h}
+
+\texttt{printf} is not implemented in \texttt{stdio.h}. Open the file and have a look: it is mostly a long list of \emph{declarations} like these:\lazynote{Declaration}{Tells the compiler what a function is called, what arguments it takes and what it gives back, but does not contain the function's code.}
+\begin{minted}[linenos=false]{c}
+extern int printf (const char *__restrict __format, ...);
+extern int puts (const char *__s);
+\end{minted}
+
+A declaration only tells the compiler what a function looks like: its name, the arguments it takes and the type it returns. With the declaration, the compiler can check that a call to \texttt{printf} is written correctly and knows how to pass the arguments. Where the code of \texttt{printf} lives, the compiler does not care---that is the linker's job.
+
+So header files and libraries are two different things:
+\begin{itemize}
+  \item a header file (such as \texttt{stdio.h}) is a text file full of declarations, used at compile time;
+  \item a library (such as \texttt{libc.so.6} on Linux) is compiled machine code, used at link time and at run time.\lazynote{Library}{A bundle of functions, written and compiled in advance, for other programs to use. Section~\ref{sec:library} builds one of our own.}
+\end{itemize}
+
+So where is \texttt{stdio.h}? GCC searches the following directories, in order:
+\begin{minted}[linenos=false]{text}
+/usr/lib/gcc/x86_64-linux-gnu/15/include
+/usr/local/include
+/usr/include/x86_64-linux-gnu
+/usr/include
+\end{minted}
+and finally finds it at \texttt{/usr/include/stdio.h}. You can print this list with \texttt{echo | gcc -E -Wp,-v -}.
+
+\section{From Source Code to Executable}
+\label{sec:toolchain}
+
+Normally we type just one command:
+\begin{minted}[linenos=false]{text}
+gcc hello.c -o hello
+\end{minted}
+But \texttt{gcc} is only the ``manager''. Behind the scenes it calls four tools in turn, and each step produces an intermediate file (Figure~\ref{fig:toolchain}). With the right options, you can make \texttt{gcc} stop after any step and look at what that step produced.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      node distance=4mm and 9mm,
+      file/.style={draw, minimum width=19mm, minimum height=7mm, font=\ttfamily\small},
+      tool/.style={font=\small, align=center},
+      arr/.style={-{Stealth}, thick},
+    ]
+    \node[file]                 (c) {hello.c};
+    \node[file, right=of c]     (i) {hello.i};
+    \node[file, right=of i]     (s) {hello.s};
+    \node[file, right=of s]     (o) {hello.o};
+    \node[file, below=12mm of o] (x) {hello};
+    \node[file, left=of x, dashed] (lib) {libc etc.};
+
+    \draw[arr] (c) -- node[tool, above=1mm] {preprocess\\\texttt{-E}} (i);
+    \draw[arr] (i) -- node[tool, above=1mm] {compile\\\texttt{-S}} (s);
+    \draw[arr] (s) -- node[tool, above=1mm] {assemble\\\texttt{-c}} (o);
+    \draw[arr] (o) -- node[tool, right=1mm] {link} (x);
+    \draw[arr, dashed] (lib) -- (x);
+  \end{tikzpicture}
+  \caption{The four steps of gcc}
+  \label{fig:toolchain}
+\end{figure}
+
+Here are the four commands from this chapter's Makefile. Step by step, they do the same job:
+\begin{minted}[linenos=false]{text}
+gcc -E hello.c -o hello.i      # 1. preprocess
+gcc -S hello.i -o hello.s      # 2. compile
+gcc -c hello.s -o hello.o      # 3. assemble
+gcc hello.o -o hello           # 4. link
+\end{minted}
+
+Table~\ref{tab:hello-files} lists the file produced by each step. An 84-byte source file grows to more than twenty thousand bytes after preprocessing---all of it brought in by \texttt{stdio.h} and the other headers it includes.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Files produced by each step}
+  \label{tab:hello-files}
+  \small
+  \begin{tabular}{llrl}
+    \toprule
+    File & Contents & Size (bytes) & Produced by \\
+    \midrule
+    \texttt{hello.c} & C source code            & 84      & the programmer \\
+    \texttt{hello.i} & preprocessed C code      & 21\,439 & preprocessor \texttt{cpp} \\
+    \texttt{hello.s} & assembly code            & 661     & compiler \texttt{cc1} \\
+    \texttt{hello.o} & object file (machine code) & 1\,496 & assembler \texttt{as} \\
+    \texttt{hello}   & executable               & 15\,952 & linker \texttt{ld} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Step 1: Preprocessing}
+
+The preprocessor handles every line that starts with \texttt{\#}: it expands the files named by \texttt{\#include}, replaces macros and strips comments. Its output is still C code, just without the \texttt{\#include}.
+
+Open \texttt{hello.i} and you will find more than eight hundred lines. Almost all of the beginning is type definitions and function declarations copied from header files, including the declarations of \texttt{printf} and \texttt{puts}. More than twenty header files have been pulled in, because \texttt{stdio.h} itself includes other headers. The code we actually wrote has been pushed all the way to the end of the file:
+\codefile{code/ch01/hello_tail.i}{The last few lines of hello.i}{lst:hello-i}
+
+The first line, \texttt{\# 3 "hello.c"}, is a marker the preprocessor leaves for the compiler. It means ``the following code comes from line 3 of \texttt{hello.c}''. When the compiler reports an error, it uses these markers to find the original line numbers.
+
+\subsection{Step 2: Compiling}
+
+The compiler, \texttt{cc1}, translates C code into assembly code.\lazynote{Assembly code}{The ``text version'' of machine instructions. Each line roughly corresponds to one CPU instruction, such as \texttt{call} or \texttt{ret}.} This is the most complicated step of the whole process: lexical analysis, parsing, type checking, optimization and code generation all happen here. The main part of \texttt{hello.s} is shown in Listing~\ref{lst:hello-s} (to make it easier to read, the debugging directives starting with \texttt{.cfi} and a few extra lines at the end of the file have been removed).
+
+\codefile[gas]{code/ch01/hello_main.s}{The main part of hello.s (x86-64)}{lst:hello-s}
+
+Lines starting with a dot, such as \texttt{.section} and \texttt{.globl}, are directives for the assembler, not instructions. Lines 2--4 put the string into the read-only data section (\texttt{.rodata}) and name it \texttt{.LC0}; line 5 switches back to the code section (\texttt{.text}); line 6 declares \texttt{main} as a global symbol so that the linker can find it. The real instructions start at \texttt{main:} on line 8. Even if you do not know x86 assembly yet, you can follow it roughly:
+\begin{itemize}
+  \item \texttt{endbr64} is a security marker for the CPU, used to block certain attacks. You can ignore it for now.
+  \item \texttt{pushq \%rbp} and \texttt{movq \%rsp, \%rbp} set up the stack frame of \texttt{main}; the \texttt{popq \%rbp} at the end tears it down.
+  \item \texttt{leaq .LC0(\%rip), \%rax} gets the address of the string, which is then moved into the register \texttt{rdi}. On x86-64 Linux, the first argument of a function is passed in \texttt{rdi}.
+  \item \texttt{call puts@PLT} calls the function.
+  \item \texttt{movl \$0, \%eax} puts the return value 0 into \texttt{eax}---this is \texttt{return 0}.
+  \item \texttt{ret} returns.
+\end{itemize}
+
+Wait a moment. Why does it call \texttt{puts} and not \texttt{printf}?
+
+\subsection{A Small Optimization by the Compiler}
+
+\texttt{printf} is a complicated function: it scans the format string character by character, and whenever it meets a conversion specification such as \texttt{\%d} or \texttt{\%s}, it performs the matching conversion. Our string, however, contains no conversion specifications and ends with \texttt{\textbackslash n}. GCC knows that in this case \texttt{printf("Hello, world!\textbackslash n")} does exactly the same thing as \texttt{puts("Hello, world!")}---\texttt{puts} adds a newline at the end by itself. So it quietly swaps in the simpler, faster \texttt{puts}. Notice that the string \texttt{.LC0} referenced in Listing~\ref{lst:hello-s} is \texttt{"Hello, world!"}: the trailing \texttt{\textbackslash n} is gone.
+
+This tells us two things.\lazynote{Built-in function}{A standard library function that the compiler knows about and treats specially, such as \texttt{printf} or \texttt{memcpy}.} First, the compiler knows the standard library better than we might think: functions such as \texttt{printf}, \texttt{memcpy} and \texttt{strlen} have special ``built-in'' versions in GCC. The compiler knows what they mean and optimizes them. Second, even with optimization turned off, the code the compiler generates is not necessarily a word-for-word translation of the source.
+
+If you add the option \texttt{-fno-builtin}, telling GCC not to treat these functions as built-ins, the generated code will dutifully call \texttt{printf}.
+
+\subsection{Step 3: Assembling}
+
+The assembler, \texttt{as}, translates the assembly code into machine code and produces the \emph{object file} \texttt{hello.o}.\lazynote{Object file}{A compiled ``half-finished product''. It contains machine code, but the references to outside functions are still blank, waiting for the linker to fill them in.} Machine code is what the CPU really executes: a sequence of bytes. \texttt{objdump -d -r hello.o} disassembles it for us (Listing~\ref{lst:hello-o}).
+
+\codefile[text]{code/ch01/hello_main.objdump}{Machine code of main in hello.o}{lst:hello-o}
+
+On each line, the left column is the offset of the instruction within \texttt{main}, the middle is its machine code, and the right is the corresponding assembly instruction. You can see that x86 instructions come in different lengths: \texttt{push \%rbp} is a single byte, \texttt{55}, while \texttt{lea} takes seven bytes. The CPU has to work out how long an instruction is before it knows where the next one begins---this is one of the reasons x86 CPUs are hard to build, and we will come back to it when we talk about instruction encoding.
+
+Now look at the \texttt{call} instruction at offset \texttt{12}.\lazynote{Relocation}{A ``to-do list'' inside an object file: which position needs to be filled with the address of which symbol.} Its machine code is \texttt{e8 00 00 00 00}. \texttt{e8} means ``call'', and the next four bytes should be the relative address of the function being called---but they are all zero. The line below it, \texttt{R\_X86\_64\_PLT32 puts-0x4}, is a \emph{relocation} entry. It says: ``The address of \texttt{puts} goes here, but I do not know where it is yet.'' Likewise, the \texttt{lea} instruction at offset \texttt{8} leaves four bytes blank, waiting for the address of the string.
+
+\texttt{hello.o} is a ``half-finished product'': its own code has been translated into machine code, but its references to the outside world are still blank. \texttt{nm hello.o} shows that \texttt{main} is marked \texttt{T} (defined in the code section) and \texttt{puts} is marked \texttt{U} (undefined).
+
+\subsection{Step 4: Linking}
+
+The linker, \texttt{ld}, puts the object files and libraries together, fills in all the blank addresses and produces the executable.
+
+The code of \texttt{puts} is in the C standard library, \texttt{libc.so.6}. This is a \emph{shared library}:\lazynote{Shared library}{A library that is loaded only when the program runs; many programs share the same copy in memory. On Linux its name ends in \texttt{.so}; on Windows it is a \texttt{.dll}.} at link time, the linker does not copy the code of \texttt{puts} into \texttt{hello}. It only notes that ``this program needs \texttt{libc.so.6}''. When the program runs, the dynamic linker \texttt{ld-linux-x86-64.so.2} loads the library into memory and fills in the real addresses. The PLT in \texttt{call puts@PLT} (Procedure Linkage Table) is a relay station set up for exactly this purpose. \texttt{ldd hello} shows the libraries the program depends on:
+\begin{minted}[linenos=false]{text}
+linux-vdso.so.1
+libc.so.6 => /usr/lib/x86_64-linux-gnu/libc.so.6
+/lib64/ld-linux-x86-64.so.2
+\end{minted}
+
+At link time, \texttt{gcc} also quietly adds a few object files we never wrote: \texttt{Scrt1.o}, \texttt{crti.o}, \texttt{crtbeginS.o}, \texttt{crtendS.o} and \texttt{crtn.o}. Run \texttt{gcc} with the option \texttt{-v} and you will see them in the link command. \texttt{Scrt1.o} contains a function called \texttt{\_start}, and that is the program's real entry point.
+
+\section{After the Program Starts}
+\label{sec:runtime}
+
+Type \texttt{./hello} in the terminal, press Enter, and \texttt{Hello, world!} appears on the screen. In between, this is what happens:
+\begin{enumerate}
+  \item The terminal program (the shell) asks the operating system to run \texttt{hello}. The operating system reads the file, creates a new process for it and maps its code and data into memory.
+  \item Because the program needs a shared library, the operating system first hands control to the dynamic linker. The dynamic linker loads \texttt{libc.so.6} and fills in the addresses of \texttt{puts} and the other functions.
+  \item The program starts executing at \texttt{\_start}.\lazynote{Entry point}{The location of the first instruction executed after a program is loaded. The real entry point of a C program is \texttt{\_start}, not \texttt{main}.} It does some preparation, such as sorting out the command-line arguments, and then calls \texttt{main} through the C standard library.
+  \item \texttt{main} calls \texttt{puts}.\lazynote{System call}{The way a program asks the operating system kernel to do something for it, such as writing to the screen. Covered in detail in Section~\ref{sec:syscall}.} \texttt{puts} puts the string into the standard output buffer and eventually makes the \texttt{write} system call, asking the operating system to write those bytes to the terminal.
+  \item \texttt{main} returns 0. The C standard library then calls \texttt{exit(0)}, which writes out whatever is left in the buffer, and then uses the \texttt{exit\_group} system call to tell the operating system: this process is finished, and its exit status is 0.
+\end{enumerate}
+
+Here we finally reach the bottom of the software: a program cannot write on the screen by itself; it can only ask the operating system for help. And the operating system is just another program---every one of its instructions must, in the end, be executed by the CPU.
+
+\section{What the CPU Sees}
+
+Peel away all these layers and the CPU sees just one thing: a sequence of bytes in memory. The \texttt{55}, \texttt{48 89 e5}, \texttt{c3}\ldots{} in Listing~\ref{lst:hello-o} are what the CPU really has to deal with.
+
+The CPU's job is a loop that never stops:
+\begin{enumerate}
+  \item \lazynote{Program counter}{A register inside the CPU that holds the memory address of the next instruction to execute; PC for short.}Fetch: read the bytes of an instruction from memory, at the address given by the program counter (called \texttt{rip} on x86-64);
+  \item Decode: work out which instruction these bytes are and which registers it uses;
+  \item Execute: do the arithmetic, or access memory;
+  \item Write back: write the result to a register or to memory, and point the program counter at the next instruction.
+\end{enumerate}
+
+The functions, variables and types of C no longer exist at this level. All that is left are registers, memory addresses and instructions, one after another. \texttt{main} is an address, \texttt{"Hello, world!"} is fourteen bytes in memory (the last one is 0), and \texttt{return 0} is setting the register \texttt{eax} to 0.
+
+From the next part on, we will build a CPU that does exactly this with our own hands: it will fetch, decode and execute, and it will run programs we write in C. To keep it simple, we will not build a CPU with instructions of varying length like x86; instead we will choose a more regular instruction set.
+
+\section{Don't Close the Book Just Yet}
+\label{sec:dont-quit}
+
+All right. By now you are probably dizzy: preprocessing, object files, relocations, the PLT, dynamic linking, system calls\ldots{} plus screen after screen of assembly code and machine code. Are you about to close this book and toss it aside?
+
+{\Large\bfseries But---}
+
+\begin{center}
+  \begin{tikzpicture}[scale=1.1, line width=1.2pt]
+    % The two cheeks: the outline of two circles of radius 1 centred at (-0.72,0) and (0.72,0),
+    % which meet at (0,±0.694)
+    \filldraw[fill=pink!70]
+      (0,0.694) arc[start angle=43.95, end angle=316.05, radius=1]
+                arc[start angle=223.95, end angle=496.05, radius=1];
+    % The crack in the middle
+    \draw (0,0.694) .. controls (0.07,0.3) .. (0.02,-0.25);
+    % Highlights
+    \draw[white, line width=2.2pt, line cap=round]
+      (-1.3,0.42) arc[start angle=150, end angle=115, radius=0.7];
+    \draw[white, line width=2.2pt, line cap=round]
+      (0.22,0.58) arc[start angle=150, end angle=115, radius=0.7];
+    % Blush
+    \fill[red!40, opacity=0.5] (-0.95,-0.35) ellipse[x radius=0.22, y radius=0.12];
+    \fill[red!40, opacity=0.5] ( 0.95,-0.35) ellipse[x radius=0.22, y radius=0.12];
+    % Wiggle
+    \foreach \s in {-1, 1} {
+      \draw[gray, line width=0.8pt, line cap=round]
+        (\s*1.95, 0.35) arc[start angle=90-\s*90+\s*30, end angle=90-\s*90-\s*30, radius=0.4];
+      \draw[gray, line width=0.8pt, line cap=round]
+        (\s*2.2, 0.5) arc[start angle=90-\s*90+\s*35, end angle=90-\s*90-\s*35, radius=0.65];
+    }
+  \end{tikzpicture}
+
+  \smallskip
+  (No, not that butt.)
+\end{center}
+
+Hear me out!
+
+\begin{center}
+  {\Large\bfseries You don't need to understand any of that yet.}
+\end{center}
+
+Really. These are the things the rest of this book will peel back, one layer at a time. This chapter just lets you stand at the door and glance at how deep it goes inside. If you didn't follow it, that is perfectly normal; if you followed all of it right now, there would be no need to write the rest of the book.
+
+For now you only need to do one thing: treat Listing~\ref{lst:hello} as a template. Copy the \texttt{\#include <stdio.h>}, \texttt{int main(void)} and \texttt{\{} at the top, and the \texttt{return 0;} and \texttt{\}} at the bottom, exactly as they are---don't change a single character. In between, write one \texttt{printf} line for each thing you want to print, as many lines as you like:
+
+\codefile{code/ch01/hey.c}{Print whatever you like}{lst:hey}
+
+There are only three rules:
+\begin{itemize}
+  \item put what you want to print inside a pair of double quotes;
+  \item \texttt{\textbackslash n} means ``new line''; add it wherever you want the line to break;
+  \item don't forget the semicolon \texttt{;} at the end of every \texttt{printf(...)} line.
+\end{itemize}
+
+Save it as \texttt{hey.c}, then compile and run it:
+\begin{minted}[linenos=false]{text}
+gcc hey.c -o hey
+./hey
+\end{minted}
+\needspace{14\baselineskip}
+and this appears on the screen:
+\inputminted[linenos=false]{text}{code/ch01/hey.out}
+
+Make the triangle as big as you like. Use \texttt{*}, use \texttt{@}, or any other character. Want to show your dad what you made? Replace \texttt{Hey Dad!} with whatever you want to say to him. Typos are no big deal either: \texttt{gcc} will tell you which line is wrong; fix it and compile again.
+
+\bigskip
+\begin{center}
+  {\Large\bfseries Congratulations---you are already writing C programs!}
+\end{center}
+\bigskip
+
+\section{Summary}
+
+\begin{itemize}
+  \item \texttt{\#include <stdio.h>} copies in the contents of a header file. Header files contain only declarations; the code of the functions is in libraries.
+  \item \texttt{gcc} calls the preprocessor, the compiler, the assembler and the linker in turn, producing the \texttt{.i}, \texttt{.s} and \texttt{.o} files and the executable.
+  \item The compiler optimizes based on what it knows about the standard library, for example by replacing \texttt{printf} with \texttt{puts}.
+  \item Calls to outside functions in an object file are still blank; the linker and the dynamic linker fill in the real addresses.
+  \item The real entry point of a program is \texttt{\_start}, not \texttt{main}; output is finally done by the operating system through system calls.
+  \item The CPU sees only instruction bytes in memory. It fetches, decodes, executes and writes back, over and over.
+  \item You don't need to understand any of this yet. Use Hello, world as a template, write \texttt{printf} lines in the middle, and you are already writing C programs.
+\end{itemize}
+
+\section*{Exercises}
+
+\begin{enumerate}
+  \item Following Listing~\ref{lst:hey}, use \texttt{printf} to print a picture of your own design: a Christmas tree, an arrow, or the initials of your name.
+  \item Run \texttt{make} in the \texttt{code/ch01/} directory, then open \texttt{hello.i} and find the declarations of \texttt{printf} and \texttt{puts}.
+  \item Change the string in \texttt{hello.c} to \texttt{"Hello, \%s!\textbackslash n"} and add an argument \texttt{"world"}. Regenerate \texttt{hello.s}. Does it call \texttt{printf} or \texttt{puts} this time? Think about why.
+  \item Delete the line \texttt{\#include <stdio.h>} and compile again. What error or warning does GCC give?
+  \item Run \texttt{objdump -d} on both \texttt{hello.o} and \texttt{hello}, and compare the machine code of the \texttt{call} instruction in \texttt{main}. What is different?
+\end{enumerate}
