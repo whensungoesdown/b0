@@ -1,0 +1,5 @@
+$ ./kernel
+I'm going to write a number to 0xffffffff81000000...
+Segmentation fault         ./kernel
+$ echo $?
+139

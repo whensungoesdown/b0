@@ -1,0 +1,29 @@
+====== The Dragon's Cave ======
+Legend says a chest of gold is hidden in the dragon's cave.
+Torch in hand, you stand at the entrance.
+
+(Your torch will last 12 more steps)
+You are at the entrance. It is dark. A cold wind blows.
+1. Go into the cave   2. Forget it, go home
+> 1
+
+(Your torch will last 11 more steps)
+You reach a fork. On the left is a small wooden door.
+From the right comes the sound of snoring.
+1. Open the door   2. Go right   3. Back to the entrance
+> 2
+
+(Your torch will last 10 more steps)
+The dragon's lair! A big red dragon is asleep on a chest.
+1. Open the chest   2. Wake the dragon   3. Tiptoe back
+> 2
+You poke the dragon's nose. It opens one eye.
+The dragon says: "I only like people who are good at math.
+What is 1 + 2 + ... + 100? You get 3 tries."
+Try 1 > 5000
+The dragon says: "Too small."
+Try 2 > 5050
+The dragon says: "Not bad!"
+It moves aside and lets you take the chest.
+
+*** You win! You took 3 steps. ***

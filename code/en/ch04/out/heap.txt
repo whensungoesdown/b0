@@ -1,0 +1,8 @@
+How many students? 3
+Score of student 1: 90
+Score of student 2: 75
+Score of student 3: 60
+0x804d830 holds 90
+0x804d834 holds 75
+0x804d838 holds 60
+Average: 75

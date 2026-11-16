@@ -1,0 +1,6 @@
+code       main      0x80491d6
+read-only  "hello"   0x804a023
+data       counter   0x804c02c
+BSS        table     0x804c060
+heap       malloc    0x804d010
+stack      local     0xbffffdec

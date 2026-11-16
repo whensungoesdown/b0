@@ -1,0 +1,40 @@
+%! TeX root = ../../main-en.tex
+% 译自: chapters/zh/ending.tex @ 9048155:chapters/zh/ending.tex
+% 全书正文的结尾：放在第 5 章之后、附录之前，不编号
+\chapter*{Before You Go}
+\addcontentsline{toc}{chapter}{Before You Go}
+\markboth{Before You Go}{Before You Go}
+
+No need for a thick book that looks professional and feels like it never ends. So the book ends here. It already says quite a lot.
+
+Learning to program, you will run into plenty of trouble. But it's worth it: programming is talking to machines, and one day, to robots.
+
+You believe there will be lots of robots in the future too, right? Maybe there will even be a war between robots and humans, like in \emph{The Matrix}. In a world like that, you'll need to truly understand how systems work. You'll have to talk to the robots in programming languages, in assembly code, in 0s and 1s---and maybe even fight them with voltage glitches, current surges and electromagnetic pulses.
+
+So you think programming in C is hard right now? Think again.
+
+\bigskip
+
+OK, I know you've made it to this page and may still feel you can't do a thing. You're staring at the iPad in your hands, wondering: where do I start? Which app do I download? This book doesn't match the thing in my hands at all!
+
+Your first challenge: set up a programming environment. Type in Hello, world, compile it, run it. Stuck? Flip back through this book, again and again. A word you don't know? Ask DeepSeek!
+
+\begin{center}
+  \begin{tikzpicture}[line width=0.8pt]
+    % 终端窗口
+    \filldraw[fill=black!85, draw=gray] (0,0) rectangle (6.4,2.6);
+    \fill[gray!50] (0,2.35) rectangle (6.4,2.6);
+    \foreach \x/\c in {0.15/red!70, 0.35/yellow!80!orange, 0.55/green!60!black}
+      \fill[\c] (\x,2.475) circle (0.06);
+    \node[anchor=north west, align=left, font=\ttfamily\small, text=green!70] at (0.15,2.2)
+      {\$ gcc hello.c -o hello\\\$ ./hello\\Hello, world!\\\$ \_};
+    \node[font=\lazyfont\bfseries\small, text=lazyred] at (3.2,-0.4) {Your First Challenge};
+  \end{tikzpicture}
+\end{center}
+
+As for the exercises at the end of each chapter, don't take them too seriously---I didn't write them. An AI did.
+
+\vspace{2em}
+\begin{flushright}
+  {\large\itshape Good luck.}
+\end{flushright}

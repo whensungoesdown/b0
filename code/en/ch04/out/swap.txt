@@ -1,0 +1,2 @@
+after swap_wrong: a = 3, b = 4
+after swap:       a = 4, b = 3

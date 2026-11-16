@@ -1,0 +1,3 @@
+a is 3 and lives at 0xbffffdf4
+b is 4 and lives at 0xbffffdf8
+An int takes 4 bytes

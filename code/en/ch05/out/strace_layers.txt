@@ -1,0 +1,4 @@
+write(1, "1. Hello from printf\n", 21)  = 21
+write(1, "2. Hello from write\n", 20)   = 20
+write(1, "3. Hello from syscall\n", 22) = 22
++++ exited with 0 +++

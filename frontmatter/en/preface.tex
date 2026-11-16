@@ -1,0 +1,27 @@
+%! TeX root = ../../main-en.tex
+% 译自: frontmatter/zh/preface.tex @ 9048155:frontmatter/zh/preface.tex
+\chapter{Preface}
+
+There is an old Chinese saying: ``The real secret fits in one sentence; the fake one fills ten thousand books.'' Of course, no single skill in computing can really be told in one sentence. Still, when someone wants to learn computer architecture, please don't start by handing them \emph{Computer Architecture: A Quantitative Approach}. Who could possibly understand that?
+
+Let me first tell you how I ended up here, at the CPU.
+
+As a kid, I badly wanted to know how computers worked, but never dared to wonder how the hardware was made. To me, hardware was magic that had grown out of thin air, just sitting there like one of the built-in rules of the world. Questioning it never crossed my mind; neither did being curious about how it worked. All I knew was that CPUs got faster every year, and my own computer was out of date in no time.
+
+In high school and university, I started learning hacking. For me it was a passage down to the low-level software, my ``White Rabbit''---like the white rabbit in \emph{Alice's Adventures in Wonderland}: follow it, and you fall into another world. This time, at last, I dared to be curious: how were those hacking tools made?
+
+First came Pascal and BASIC, then C. Then I learned the word ``API'', which meant a service provided by the operating system---and along the way it finally dawned on me that there was such a thing as an operating system at all. Once I could call the Win32 API, it felt very different from printing triangles with \texttt{printf} in C. Suddenly I had power. It seemed there was nothing in the world of computers I couldn't do.
+
+Next came assembly, and after that reading the leaked Windows kernel source, and the open-source Linux kernel as well. I tried writing drivers, and even thought about writing a small operating system of my own. That one never actually happened, but I did study Zhao Jiong's \emph{A Heavily Commented Linux Kernel Source Code} (Chinese title: \emph{Linux 内核完全注释}), a book that annotates the source code of the Linux 0.11 kernel line by line. At university, I even got the Linux 0.11 kernel running on a real PC.
+
+There was a home-made TCP stack, too. Back then, my rootkit could slip past every commercial software firewall, but it moved data painfully slowly, because it sent one packet, waited for the acknowledgement, and only then sent the next. To fix that, I learned the sliding window from the 4.4BSD source code.
+
+After quite a few rootkit projects, my eyes turned to things even further down, such as how a CPU works. x86 assembly gave me only a few clues, and that was a long way from really understanding a CPU: how it worked, what it looked like---I couldn't even picture it.
+
+Around that time I joined a project that emulated an x86 CPU in software in order to run malicious code inside it. My part was the memory emulation. Most of that work, though, was really at the operating-system level: paging, guard pages, copy-on-write. Memory itself doesn't need to be truly emulated---the emulator is already running in memory---only some of its mechanisms do. But that was exactly the clue I needed. An old Chinese phrase says that before reading the scriptures you must first find the ferry crossing. That project was my ferry crossing to the open sea.
+
+A few years later, I wrote an x86 CPU emulator myself. It was far from complete, but it taught me how to decode binary code, and how an instruction is built from parts such as the opcode and the ModR/M byte. That is where my journey into the CPU really began.
+
+None of this should sound as if I've reached the end of the road and already know how to build a modern CPU. I'm still a long way from that. But I am heading there, and the road keeps getting clearer.
+
+This book is the record I've left along the way. I'm still chasing my little white rabbit.

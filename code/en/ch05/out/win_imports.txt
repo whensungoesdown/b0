@@ -1,0 +1,7 @@
+win_hello.exe:
+  KERNEL32.dll   GetStdHandle
+  KERNEL32.dll   WriteFile
+win_printf.exe:
+  msvcrt.dll     puts
+win_msgbox.exe:
+  USER32.dll     MessageBoxW

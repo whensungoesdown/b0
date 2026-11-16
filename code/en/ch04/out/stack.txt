@@ -1,0 +1,4 @@
+m in main   lives at 0xbffffdf8
+ a in first  lives at 0xbffffdd8
+  b in second lives at 0xbffffdb8
+    c in third  lives at 0xbffffd98

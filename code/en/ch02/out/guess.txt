@@ -1,0 +1,13 @@
+I'm thinking of a number between 1 and 100. Can you guess it?
+> 50
+Too big
+> 25
+Too small
+> 37
+Too small
+> 43
+Too big
+> 40
+Too small
+> 42
+You got it! It took you 6 tries.

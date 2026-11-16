@@ -1,0 +1,4 @@
+root      admin? yes
+Welcome, guest
+guest     admin? yes
+alice     admin? yes

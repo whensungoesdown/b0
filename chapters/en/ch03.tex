@@ -1,0 +1,291 @@
+%! TeX root = ../../main-en.tex
+% 译自: chapters/zh/ch03.tex @ 9048155:chapters/zh/ch03.tex
+\chapter{The Structure of a C Program}
+\label{chap:c-structure}
+
+When you design a CPU, C is everywhere: the initialization code that runs after the boot code, the device drivers, the operating system kernel, the test programs used for verification---all of them are written in C. This chapter does not teach C syntax. Instead it looks at a more practical question: how should a function be organized?
+
+C has no exceptions and no destructors. A function often has to do several things in a row that can each fail---open a file, allocate memory, claim a piece of hardware---and it has to check the return value after every step. When a step fails, it must also give back, one by one, every resource it has already taken. This part of the code is often longer than the code that does the real work. Without a fixed way of writing it, a function quickly becomes hard to read, and bugs such as resource leaks and double frees soon follow.
+
+Over many years of practice, large C code bases have settled on a few fixed patterns. Windows kernel code often wraps the body of a function in a \texttt{do \{ \} while (FALSE)} loop that runs only once, and uses \texttt{break} to get out when something goes wrong. The Linux kernel uses \texttt{goto} to jump to the cleanup code at the end of the function. The spelling is different, but the idea is the same:
+\begin{itemize}
+  \item \textbf{The success path runs from top to bottom.}\lazynote{Success path}{The road the program takes when every step goes well. A good function makes it one straight line from top to bottom.} If every step succeeds, the code runs from the top of the function straight down to the bottom, with no layers of nesting in between. Read it once from top to bottom and you know what the function does.
+  \item \textbf{The failure paths share one exit.} When any step fails, the code leaves the main flow at once and goes to the same piece of cleanup code at the end of the function, which frees the resources and returns an error code.
+\end{itemize}
+
+This chapter starts with a concrete example that shows what goes wrong without such a structure. Then it introduces three patterns in turn: the loop that runs once, \texttt{goto}, and the early return. Finally it sums up the habits that go with them.
+
+The examples for this chapter are in the \texttt{code/en/ch03/} directory. Except for the Windows driver example, all of them can be compiled and tested on Linux with \texttt{make test}.
+
+\section{An Example: Reading a File into Memory}
+\label{sec:load-file}
+
+Every pattern in this chapter implements the same function: it reads the whole contents of a file into a freshly allocated block of memory.
+\begin{minted}[linenos=false]{c}
+int load_file(const char *path, char **out, size_t *out_len);
+\end{minted}
+The rules are:
+\begin{itemize}
+  \item On success it returns 0, \texttt{*out} points to a buffer ending in \texttt{'\textbackslash 0'}, and \texttt{*out\_len} is the length of the file. The caller frees the buffer with \texttt{free}.
+  \item On failure it returns a negative error code, for example \texttt{-ENOENT} when the file does not exist. This is a Linux kernel habit. In this case \texttt{*out} is \texttt{NULL}.
+\end{itemize}
+
+The job takes five steps. Each of them can fail, and two resources are involved: the file and the buffer (Table~\ref{tab:load-steps}). The later a step fails, the more resources there are to free---and that is exactly why error handling is hard to write.
+
+\begin{table}[htbp]
+  \begin{lazywide}
+  \caption{The five steps of reading a file}
+  \label{tab:load-steps}
+  \begin{tabular}{clll}
+    \toprule
+    Step & Operation & Function & To free on failure \\
+    \midrule
+    1 & open the file          & \texttt{fopen}  & nothing \\
+    2 & seek to the end        & \texttt{fseek}  & the file \\
+    3 & get the file length    & \texttt{ftell}  & the file \\
+    4 & allocate a buffer      & \texttt{malloc} & the file \\
+    5 & read the contents      & \texttt{fread}  & the buffer and the file \\
+    \bottomrule
+  \end{tabular}
+  \end{lazywide}
+\end{table}
+
+\section{Two Common Bad Styles}
+
+\subsection{Nesting Deeper and Deeper}
+
+The most direct way is ``only go on if it worked'': whenever a step succeeds, do the next step inside the \texttt{if} (Listing~\ref{lst:nested}).
+
+\codefile{code/en/ch03/nested.c}{Nesting deeper and deeper}{lst:nested}
+
+This code is correct, but it has three problems:
+\begin{enumerate}
+  \item The success path---the thing this function is really meant to do---has been pushed to the sixth level of indentation. The more steps there are, the further right the code drifts, until the whole thing looks like an arrowhead. That is why such code is sometimes called \emph{arrow code}.\lazynote{Arrow code}{Layer after layer of \texttt{if}, indented deeper and deeper, until the code looks like an arrowhead.}
+  \item Every \texttt{else} is far away from its \texttt{if}. When you see \texttt{err = -errno;}, you have to count braces upwards to find out which step's failure it handles.
+  \item Adding a step means adding another level of nesting and shifting all the code after it to the right.
+\end{enumerate}
+
+\subsection{Cleaning Up at Every Error Point}
+
+Another way is to return as soon as something fails, freeing the resources already taken just before returning (Listing~\ref{lst:dup}).
+
+\codefile{code/en/ch03/dup_cleanup.c}{Cleaning up at every error point}{lst:dup}
+
+The nesting is gone and the success path is back on the left, but the cleanup code has been copied again and again: \texttt{fclose(fp)} appears five times. If you ever add another resource, say a lock, you have to find every \texttt{return} and add the code to release it. Miss one, and you have a resource leak.\lazynote{Resource leak}{Taking a resource (memory, a file, a lock\ldots{}) and never giving it back.}
+
+Repeated code is also a good hiding place for small mistakes. Look at the branch where \texttt{fseek} fails: \texttt{errno} must be saved in \texttt{err} \emph{before} calling \texttt{fclose}, because \texttt{fclose} may change \texttt{errno}.\lazynote{\texttt{errno}}{The C library's record of ``why the last thing failed''. Later library calls may overwrite it.} If you write \texttt{fclose(fp); return -errno;} instead, you may return the wrong error code. Getting such details right at every single error point is very hard.
+
+\section{The Rule: The Success Path Runs from Top to Bottom}
+\label{sec:happy-path}
+
+A good structure looks like Figure~\ref{fig:happy-path}: the success path is a straight line on the left, from top to bottom. Whenever a step fails, the code leaves to the right and joins the same cleanup code at the bottom. The success path also passes through that cleanup code at the end.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      node distance=5mm,
+      box/.style={draw, rounded corners, minimum width=40mm, minimum height=7mm},
+      ok/.style={-{Stealth}, thick},
+      fail/.style={red!70!black, dashed},
+    ]
+    \node[box]               (s1) {1. Open the file};
+    \node[box, below=of s1]  (s2) {2. Seek to the end};
+    \node[box, below=of s2]  (s3) {3. Get the length};
+    \node[box, below=of s3]  (s4) {4. Allocate a buffer};
+    \node[box, below=of s4]  (s5) {5. Read the contents};
+    \node[box, below=of s5]  (s6) {Hand over the buffer};
+    \node[box, below=8mm of s6, fill=gray!10] (c) {Clean up, return status};
+
+    \foreach \a/\b in {s1/s2, s2/s3, s3/s4, s4/s5, s5/s6, s6/c}
+      \draw[ok] (\a) -- (\b);
+
+    \coordinate (rail) at ($(s1.east) + (16mm, 0)$);
+    \foreach \s in {s1, s2, s3, s4, s5}
+      \draw[fail] (\s.east) -- (\s.east -| rail);
+    \draw[fail, -{Stealth}] (s1.east -| rail) -- (c.east -| rail) -- (c.east);
+
+    \node[right=1mm of rail |- s3, red!70!black, align=left]
+      {Failure\\(\texttt{break} or \texttt{goto})};
+    \node[left=6mm of s3, align=center] {Success path\\top to bottom};
+  \end{tikzpicture}
+  \caption{The success path and the single exit}
+  \label{fig:happy-path}
+\end{figure}
+
+More precisely, there are four rules:
+\begin{enumerate}
+  \item \textbf{Initialize at the start.} At the top of the function, set every resource variable to an ``empty'' value (\texttt{NULL} for a pointer, $-1$ for a file descriptor), and set the status variable to a value that means failure. Then the cleanup code only has to check whether a variable is empty to know whether that resource was ever taken.
+  \item \textbf{Call, check, leave.} Write every step as ``call $\to$ check the return value $\to$ leave on failure''. On success, don't indent; just carry on downwards.
+  \item \textbf{One exit.} Every failure goes to the same cleanup code at the end of the function. Resources are freed in the reverse order of taking them.
+  \item \textbf{One \texttt{return}.} The function returns only once, at the very end, and what it returns is the status variable.
+\end{enumerate}
+
+There are two ways to ``leave'': \texttt{break} out of a loop that runs only once, or \texttt{goto} a label at the end of the function. The next two sections cover them one at a time.
+
+\section{Pattern 1: The Loop That Runs Once}
+\label{sec:do-while}
+
+\subsection{How It Works}
+
+\begin{minted}[linenos=false]{c}
+do {
+    /* body of the function: break if any step fails */
+} while (FALSE);
+/* cleanup code */
+\end{minted}
+
+The condition \texttt{FALSE} is false, so the loop body runs exactly once, just like an ordinary block of code. But it is still a loop, so you can use \texttt{break} inside it, and \texttt{break} jumps straight to the first statement after the loop. So \texttt{do \{ \} while (FALSE)} becomes ``a block you can jump out of at any moment'': put the body inside the loop, put the cleanup code after it, and \texttt{break} as soon as any step fails.
+
+\texttt{FALSE} is a macro defined in the Windows headers, with the value 0. Elsewhere the same trick is written \texttt{do \{ \} while (0)}.
+
+\begin{quote}
+  \textbf{Careful:} it must be written \texttt{do \{ \} while (FALSE);}. If you write \texttt{while (FALSE) \{ \}}, the condition is checked before entering the loop, it is false, and the body never runs at all.
+\end{quote}
+
+\subsection{An Example from the Windows Kernel}
+
+Listing~\ref{lst:nt} does the same job in a Windows kernel driver. Drivers usually call the \texttt{Zw} family of functions, such as \texttt{ZwCreateFile}; they take the same arguments as user-mode functions like \texttt{NtCreateFile}. To compile this code you need the Windows Driver Kit (WDK).\lazynote{WDK}{Windows Driver Kit: Microsoft's tools and header files for writing Windows drivers.}
+
+\codefile{code/en/ch03/nt_read.c}{The do-while(FALSE) style in the Windows kernel}{lst:nt}
+
+A few things to notice in this code:
+\begin{itemize}
+  \item \texttt{status} starts out as \texttt{STATUS\_UNSUCCESSFUL}, and \texttt{file} and \texttt{data} start out as \texttt{NULL}.
+  \item After each system call, \texttt{NT\_SUCCESS(status)} checks the result.\lazynote{\texttt{NTSTATUS}}{The status code returned by Windows kernel functions. \texttt{NT\_SUCCESS} tells whether it means success.} On failure the code does \texttt{break}, and by then \texttt{status} already holds the error code returned by the system function.
+  \item For errors that do not come from a system function---the file is empty, the file is too big, the allocation failed---you have to set \texttt{status} yourself before the \texttt{break}. This is the easiest thing to forget. If you leave it out, \texttt{status} still holds the \texttt{STATUS\_SUCCESS} from the previous step, and the function proudly reports success without having done anything.
+  \item When everything has succeeded, \texttt{data} is handed to the caller and then set to \texttt{NULL}, so the cleanup code after the loop will not free it. This trick---``set it to empty after giving it away''---lets success and failure share the same cleanup code.
+  \item After the loop, the code first checks \texttt{status} and prints a debug message on failure. Then it frees the resources in the reverse order of taking them, and finally returns \texttt{status}.
+\end{itemize}
+
+\subsection{Things to Watch Out For}
+
+\begin{itemize}
+  \item \texttt{break} only leaves the innermost loop or \texttt{switch}. If the body contains a \texttt{for} loop or a \texttt{switch}, a \texttt{break} in there will not reach the cleanup code. In that case, set the status, leave the inner loop, and then \texttt{break} once more.
+  \item Don't use \texttt{continue} inside \texttt{do \{ \} while (FALSE)}. \texttt{continue} jumps to the loop condition, the condition is false, and the loop ends. It has the same effect as \texttt{break}, but hardly any reader will see that.
+  \item Don't nest several \texttt{do \{ \} while (FALSE)} loops, or nobody will be able to tell where each \texttt{break} goes.
+  \item At high warning levels, some compilers warn about \texttt{while (FALSE)} because ``the conditional expression is constant''.
+\end{itemize}
+
+On Windows, Microsoft's structured exception handling (SEH) can build the same structure: put the body in a \texttt{\_\_try} block, leave it with \texttt{\_\_leave}, and put the cleanup code in a \texttt{\_\_finally} block. The idea is the same as \texttt{do \{ \} while (FALSE)}.
+
+\section{Pattern 2: A Single Exit with \texorpdfstring{\NoCaseChange{goto}}{goto}}
+\label{sec:goto}
+
+In 1968 Dijkstra published his famous short letter ``Go To Statement Considered Harmful''~\cite{dijkstra1968}, and ever since, \texttt{goto} has been a forbidden word in many textbooks. What Dijkstra objected to was using \texttt{goto} to jump around a program at will, making the flow of control hard to follow. A \texttt{goto} that only jumps forwards to the cleanup code at the end of the function does not cause that problem; in fact it is clearer than the styles we have seen so far. The Linux kernel coding style even has a whole section recommending \texttt{goto} for the centralized exit of functions~\cite{linux-coding-style}.
+
+\subsection{A Single Exit Label}
+
+Listing~\ref{lst:goto-single} has just one label, \texttt{out}, and every failure jumps there.
+
+\codefile{code/en/ch03/goto_single.c}{goto a single exit}{lst:goto-single}
+
+Its structure is almost the same as \texttt{do \{ \} while (FALSE)}: \texttt{break} has become \texttt{goto out}, and the code after the loop has become the code after the label \texttt{out:}. The differences are:
+\begin{itemize}
+  \item There is no block dressed up as a loop, so the reader doesn't first have to work out that ``this loop only runs once''.
+  \item \texttt{goto} can jump straight to the exit from inside loops or \texttt{switch} statements nested to any depth. There is no ``\texttt{break} only leaves one level'' problem.
+\end{itemize}
+
+In the cleanup code, \texttt{free(buf)} does not need to check whether \texttt{buf} is empty, because the C standard says that \texttt{free(NULL)} does nothing. \texttt{fclose} makes no such promise, so \texttt{fp} has to be checked first.
+
+This style requires every resource variable to be set to its empty value before the first \texttt{goto}; otherwise the cleanup code would try to free a resource it never got. The Linux kernel coding style calls this kind of mistake a ``one err bug''~\cite{linux-coding-style}.
+
+\subsection{A Ladder of Labels}
+
+In the Linux kernel, the style in Listing~\ref{lst:ladder} is more common: one label for each resource, with the labels in the reverse order of taking the resources.
+
+\codefile{code/en/ch03/goto_ladder.c}{A ladder of labels (Linux kernel style)}{lst:ladder}
+
+Read it like this: when a step fails, jump to the label that frees ``the resources already taken before this step''. For example, when \texttt{fread} fails, both the buffer and the file have been taken, so it jumps to \texttt{err\_free}; after \texttt{free(buf)}, the code falls through to \texttt{err\_close} and closes the file. When \texttt{malloc} fails there is no buffer yet, so it jumps straight to \texttt{err\_close}.
+
+The advantage of this style is that the cleanup code never has to check whether a variable is empty, and each label does just one thing. To add a resource, you only add a label at the place where it is freed. The downside is that the success path has to free the resources it no longer needs (here, \texttt{fclose}) and return before the labels, so the function has two \texttt{return}s. And if you jump to the wrong label, you leak a resource or free it twice.
+
+The Linux kernel coding style suggests that a label's name should say what it does, like \texttt{err\_free}, rather than \texttt{err1} or \texttt{err2}~\cite{linux-coding-style}. That way you don't have to renumber the labels when you add or remove a step, and it is easier to check that every \texttt{goto} jumps to the right place.
+
+\subsection{Rules for Using goto}
+
+\begin{itemize}
+  \item Only jump forwards, and only to the cleanup code at the end of the function.
+  \item Don't jump into the middle of a block, such as an \texttt{if} or a loop.
+  \item Don't jump over the initialization of a variable. C does not allow jumping from outside the scope of a variable-length array (VLA) into its scope; C++ does not allow jumping over a variable declaration with an initializer. Declaring all variables at the top of the function avoids this problem.
+  \item Give labels names that say what they do.
+\end{itemize}
+
+\section{Pattern 3: The Early Return}
+\label{sec:early-return}
+
+If a function fails before it has taken any resources, it needs no single exit: a plain \texttt{return} is the clearest. The most common case is checking the arguments at the start of a function, as in this function that sets the baud rate of a serial port:
+\begin{minted}[linenos=false]{c}
+int uart_set_baud(struct uart *u, unsigned int baud)
+{
+    if (u == NULL)
+        return -EINVAL;
+    if (baud == 0 || baud > UART_MAX_BAUD)
+        return -ERANGE;
+
+    u->regs->div = u->clk_hz / (16 * baud);
+    return 0;
+}
+\end{minted}
+
+This style is called a \emph{guard clause}.\lazynote{Guard clause}{A few ``guards'' at the start of a function: if a condition is not met, return at once. The rest of the code only deals with the success path.} First rule out the cases that don't meet the conditions; what remains is the success path. In Listing~\ref{lst:ladder}, too, the function returns directly when the first step, \texttt{fopen}, fails, because at that point there is nothing to free yet.
+
+Early returns and a single exit can be used together: first a few early returns to check the arguments, then a body organized with \texttt{goto} or \texttt{do \{ \} while (FALSE)}. There is only one rule: once you hold a resource that must be freed, don't \texttt{return} directly any more.
+
+\section{Comparing the Styles}
+
+Table~\ref{tab:compare} compares the styles in this chapter.
+
+\begin{table}[htbp]
+  \begin{lazywide}
+  \small
+  \caption{Comparing the error-handling styles}
+  \label{tab:compare}
+  \begin{tabular}{L{2.4cm}L{1.8cm}L{3.0cm}L{3.0cm}L{3.0cm}}
+    \toprule
+    Style & How to leave & Cleanup code & When to use & Main risk \\
+    \midrule
+    \texttt{do \{ \} while (FALSE)} & \texttt{break} & after the loop; checks whether each resource is empty & Windows code; projects whose rules forbid \texttt{goto} & a \texttt{break} inside an inner loop or \texttt{switch} doesn't get out \\
+    \addlinespace
+    \texttt{goto}, single label & \texttt{goto out} & after the label; checks whether each resource is empty & ordinary C code & resource variables not initialized to empty \\
+    \addlinespace
+    \texttt{goto}, ladder of labels & \texttt{goto err\_xxx} & each label frees one resource & Linux kernel style; many resources & jumping to the wrong label \\
+    \addlinespace
+    early return & \texttt{return} & none & before any resource is taken & returning directly after a resource is taken \\
+    \bottomrule
+  \end{tabular}
+  \end{lazywide}
+\end{table}
+
+Which one to choose depends first of all on the rules your project already has. In an existing code base, being consistent with the code around you matters far more than picking the ``better'' style. For a new project, \texttt{goto} with a single label is usually the simplest choice.
+
+\section{Habits That Go with Them}
+
+\begin{itemize}
+  \item \textbf{Free functions accept empty values.} \texttt{free(NULL)} does nothing, so the cleanup code can simply say \texttt{free(buf)}. The free functions you write yourself should accept \texttt{NULL} too, so that callers don't have to check every time.
+  \item \textbf{Set it to empty after giving it away.} As soon as you hand a resource to the caller or to another module, set the local variable to its empty value, so the cleanup code won't free it (Listings~\ref{lst:nt} and~\ref{lst:goto-single}).
+  \item \textbf{Save error codes right away.} \texttt{errno} is overwritten by later library calls, and so is Windows' \texttt{GetLastError()}. After an error, save it in your own variable immediately.
+  \item \textbf{Clear output parameters first.} Set the output parameters to empty values at the start of the function, so that on failure the caller never gets an invalid pointer.
+  \item \textbf{Don't hide jumps in macros.} \texttt{\#define CHECK(x) if (!(x)) goto out} looks like it saves a few lines, but when you read the code you can't see the jump, and it easily goes wrong when combined with \texttt{if}/\texttt{else}. The Linux kernel coding style also clearly rejects macros that affect control flow~\cite{linux-coding-style}.
+\end{itemize}
+
+\section{Help from Compilers and Other Languages}
+
+GCC and Clang offer \texttt{\_\_attribute\_\_((cleanup(func)))}: when the variable goes out of scope, the compiler calls \texttt{func} automatically to free it. Since version 6.5, the Linux kernel has used this feature to provide helper macros such as \texttt{\_\_free()} in \texttt{include/linux/cleanup.h}, and some code no longer needs hand-written \texttt{goto}s. C++ destructors (RAII)\lazynote{RAII}{The C++ way: a resource belongs to a variable and is freed automatically when the variable goes out of scope.} and Rust's \texttt{Drop} build ``free resources when leaving the scope'' right into the language.
+
+Still, in boot code, firmware and most drivers, what we write is plain standard C. The patterns in this chapter are still the basic skills for writing that code well.
+
+\section{Summary}
+
+\begin{itemize}
+  \item C has no exceptions. Every operation's return value must be checked, and on failure the resources already taken must be freed.
+  \item A good function is structured like this: the success path runs from top to bottom, and the failure paths share one exit.
+  \item There are two common ways to build a single exit: the Windows-style \texttt{do \{ \} while (FALSE)} with \texttt{break}, and the Linux-style \texttt{goto}. Before any resource has been taken, you can simply return early.
+  \item The habits that go with them: initialize resource variables to empty, set them to empty after giving them away, save error codes right away, and don't hide jumps in macros.
+\end{itemize}
+
+\section*{Exercises}
+
+\begin{enumerate}
+  \item Rewrite Listing~\ref{lst:nested} in the \texttt{do \{ \} while (0)} style, save it as \texttt{code/en/ch03/do\_while.c}, add it to \texttt{VARIANTS} in the \texttt{Makefile}, and run \texttt{make test} to check it.
+  \item Add a third resource to Listing~\ref{lst:ladder}: after a successful read, allocate another buffer of the same size, store the file contents in it converted to upper case, and hand that buffer to the caller. Which label do you need to add? Which of the existing \texttt{goto}s need to change?
+\end{enumerate}

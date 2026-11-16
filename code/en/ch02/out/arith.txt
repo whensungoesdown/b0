@@ -1,0 +1,7 @@
+17 + 5 = 22
+17 - 5 = 12
+17 * 5 = 85
+17 / 5 = 3
+17 % 5 = 2
+A day has 86400 seconds
+A year has 31536000 seconds
