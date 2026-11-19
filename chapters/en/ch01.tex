@@ -6,7 +6,7 @@
 Almost every book on C begins with the same program:
 \codefile{code/ch01/hello.c}{The simplest C program}{lst:hello}
 
-It is only seven lines long. Everybody has written it, and there seems to be nothing to say about it. But it is actually a door. Between the moment you press Enter to compile it and the moment that line of text appears on the screen, it passes through the preprocessor, the compiler, the assembler, the linker and the operating system, and only then does the CPU execute its instructions, one at a time. This book is about the very bottom of that road: how a CPU is built. Before we set off, let us walk the whole road once, from one end to the other.
+It is only seven lines long. Everybody has written it, and there seems to be nothing to say about it. But it is actually a door. Between the moment you press Enter to compile it and the moment that line of text appears on the screen, it passes through the preprocessor, the compiler, the assembler, the linker and the operating system, and only then does the CPU execute its instructions, one at a time. At the very bottom of that road is how a CPU is built. That is a long story, and this book tells only a very small first part of it: we walk the whole road once, from one end to the other, and see how a C program makes its way, layer by layer, down to the CPU.
 
 The examples for this chapter are in the \texttt{code/ch01/} directory. Run \texttt{make} in a WSL or Linux terminal and you can reproduce every file in this chapter, step by step. The output shown in the book comes from Ubuntu on x86-64 with GCC 15.2. With a different compiler version the details will differ, but the overall picture stays the same.
 
@@ -157,7 +157,7 @@ The assembler, \texttt{as}, translates the assembly code into machine code and p
 
 \codefile[text]{code/ch01/hello_main.objdump}{Machine code of main in hello.o}{lst:hello-o}
 
-On each line, the left column is the offset of the instruction within \texttt{main}, the middle is its machine code, and the right is the corresponding assembly instruction. You can see that x86 instructions come in different lengths: \texttt{push \%rbp} is a single byte, \texttt{55}, while \texttt{lea} takes seven bytes. The CPU has to work out how long an instruction is before it knows where the next one begins---this is one of the reasons x86 CPUs are hard to build, and we will come back to it when we talk about instruction encoding.
+On each line, the left column is the offset of the instruction within \texttt{main}, the middle is its machine code, and the right is the corresponding assembly instruction. You can see that x86 instructions come in different lengths: \texttt{push \%rbp} is a single byte, \texttt{55}, while \texttt{lea} takes seven bytes. The CPU has to work out how long an instruction is before it knows where the next one begins---this is one of the reasons x86 CPUs are hard to build.
 
 Now look at the \texttt{call} instruction at offset \texttt{12}.\lazynote{Relocation}{A ``to-do list'' inside an object file: which position needs to be filled with the address of which symbol.} Its machine code is \texttt{e8 00 00 00 00}. \texttt{e8} means ``call'', and the next four bytes should be the relative address of the function being called---but they are all zero. The line below it, \texttt{R\_X86\_64\_PLT32 puts-0x4}, is a \emph{relocation} entry. It says: ``The address of \texttt{puts} goes here, but I do not know where it is yet.'' Likewise, the \texttt{lea} instruction at offset \texttt{8} leaves four bytes blank, waiting for the address of the string.
 
@@ -204,7 +204,7 @@ The CPU's job is a loop that never stops:
 
 The functions, variables and types of C no longer exist at this level. All that is left are registers, memory addresses and instructions, one after another. \texttt{main} is an address, \texttt{"Hello, world!"} is fourteen bytes in memory (the last one is 0), and \texttt{return 0} is setting the register \texttt{eax} to 0.
 
-From the next part on, we will build a CPU that does exactly this with our own hands: it will fetch, decode and execute, and it will run programs we write in C. To keep it simple, we will not build a CPU with instructions of varying length like x86; instead we will choose a more regular instruction set.
+Building a CPU that does exactly this with your own hands---one that fetches, decodes and executes, and runs programs written in C---is a story for another book. If you ever do build one, you probably won't pick instructions of varying length like x86, but a more regular instruction set such as RISC-V. For the rest of this book, we stay with C itself.
 
 \section{Don't Close the Book Just Yet}
 \label{sec:dont-quit}

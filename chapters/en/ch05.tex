@@ -400,9 +400,9 @@ Figure~\ref{fig:stacks} puts the two systems side by side. The floors have diffe
 
 Starting from \texttt{printf} and peeling away one layer after another, all that is left in the end is a single \texttt{syscall} instruction. That instruction makes the CPU switch from user mode to kernel mode and jump into the operating system's code.
 
-This is a lot like the memory protection we met in Chapter~\ref{chap:memory}: neither of them is a software ``agreement''; both are built into the CPU hardware. The CPU has to remember which mode it is in. When it executes \texttt{syscall}, it has to save the address to come back to, switch modes and jump to the given entry point. And it has to stop a user program that steps out of bounds. When we build our own CPU, we will have to implement the RISC-V \texttt{ecall} instruction with our own hands.
+This is a lot like the memory protection we met in Chapter~\ref{chap:memory}: neither of them is a software ``agreement''; both are built into the CPU hardware. The CPU has to remember which mode it is in. When it executes \texttt{syscall}, it has to save the address to come back to, switch modes and jump to the given entry point. And it has to stop a user program that steps out of bounds. Anyone who builds their own RISC-V CPU has to implement the \texttt{ecall} instruction by hand.
 
-At that point our CPU will have no operating system, no glibc and no \texttt{printf}. To print a line on the screen, we will either have to write bytes to the address of the serial port ourselves (Section~\ref{sec:mmio}), or write a tiny ``kernel'' of our own to catch the \texttt{ecall}. Every layer we have seen in this chapter, we will have to build again from scratch.
+And a newly built CPU has no operating system, no glibc and no \texttt{printf}. To print a line on the screen, you either write bytes to the address of the serial port yourself (Section~\ref{sec:mmio}), or write a tiny ``kernel'' of your own to catch the \texttt{ecall}. Every layer we have seen in this chapter has to be built again from scratch. This book stops here; that road from scratch is a story for another time.
 
 \section{Summary}
 

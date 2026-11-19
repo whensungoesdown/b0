@@ -232,7 +232,7 @@ If you run \texttt{./layout} directly, and then run it again, you will find that
 With randomization turned off, a 32-bit program has the classic layout of 32-bit Linux: the program's code starts at \texttt{0x08048000}, shared libraries such as the C standard library live somewhere around \texttt{0xb7......}, and the top of the stack is right up against \texttt{0xc0000000} (the \texttt{[stack]} line of the memory map ends exactly at \texttt{c0000000}). The 1\,GB above that belongs to the kernel. You will see these numbers in lots of books and articles about 32-bit Linux.
 
 \paragraph{Two programs, one address?}
-If you run two programs at the same time, they may print exactly the same addresses. Do the two programs live in the same place? No. Each program thinks it has a whole building to itself, and the addresses it sees are \emph{virtual addresses}. Behind the scenes, the CPU and the operating system quietly map each program's virtual addresses onto real memory (\emph{physical addresses}), so each program lives in its own place and nobody gets in anyone's way. This is called \emph{virtual memory}\lazynote{Virtual memory}{Every program sees a whole address space of its own; the CPU and the OS map it onto real memory.}. How it is done, we will see in detail when we build our own CPU.
+If you run two programs at the same time, they may print exactly the same addresses. Do the two programs live in the same place? No. Each program thinks it has a whole building to itself, and the addresses it sees are \emph{virtual addresses}. Behind the scenes, the CPU and the operating system quietly map each program's virtual addresses onto real memory (\emph{physical addresses}), so each program lives in its own place and nobody gets in anyone's way. This is called \emph{virtual memory}\lazynote{Virtual memory}{Every program sees a whole address space of its own; the CPU and the OS map it onto real memory.}. How it is done would fill a book of its own; for now it is enough to know that it happens.
 
 \subsection{64-Bit Programs: For Reference}
 \label{sec:layout64}
@@ -516,7 +516,7 @@ After printing the first line, the program is stopped at the line \texttt{*p = 4
 
 So if a user program wants to use the screen or read a file, but may not touch anything of the kernel's, what can it do? The answer: go to the ``counter''. At a bank, you cannot walk into the vault and take money yourself. You hand a form across the counter, and a member of staff fetches it for you. That counter is the \emph{system call}. Remember Section~\ref{sec:runtime}? In the end, \texttt{puts} used the \texttt{write} system call to ask the kernel to put the text on the screen. The CPU has special instructions for this (\texttt{int 0x80} or \texttt{syscall} on x86, \texttt{ecall} on RISC-V). When one of them runs, the CPU switches from user mode to kernel mode and jumps to an entry point the kernel set up in advance. When the kernel has done the job, it switches back to user mode and the program carries on where it left off.
 
-User mode and kernel mode, permission checks on memory, translating virtual addresses into physical addresses---the CPU does all of these in hardware. When we build our own CPU, these are things we will have to make with our own hands.
+User mode and kernel mode, permission checks on memory, translating virtual addresses into physical addresses---the CPU does all of these in hardware. Anyone who builds their own CPU has to make all of these by hand.
 
 \section{Pointers: A Note with an Address on It}
 \label{sec:pointer}
@@ -679,7 +679,7 @@ Look carefully at the printed addresses: \texttt{0x804d830}, \texttt{0x804d834},
 
 In the end, a pointer is all about ``writing data to a given address, or reading data from there''. On Linux, a user program may only read and write the addresses the operating system has given it; write to the wrong place and you get a segmentation fault. But what if there is no operating system?
 
-The CPU we are going to build will have no operating system on it at first. Among the addresses the CPU can reach there is memory, but there are also all kinds of \emph{devices}: a serial port, a timer, some lights\ldots{} Each device takes up a few addresses. Writing a number to one address might store it in memory; writing to another might send a character out of the serial port, or switch on a light. This is called \emph{memory-mapped I/O}\lazynote{MMIO}{Memory-Mapped I/O: devices take up some addresses, and reading or writing those addresses works the device.}. For example, on the RISC-V virt board emulated by QEMU, the data register of the serial port is at address \texttt{0x10000000}. Write a byte there and a character appears on the screen:
+A freshly built CPU has no operating system on it. Among the addresses the CPU can reach there is memory, but there are also all kinds of \emph{devices}: a serial port, a timer, some lights\ldots{} Each device takes up a few addresses. Writing a number to one address might store it in memory; writing to another might send a character out of the serial port, or switch on a light. This is called \emph{memory-mapped I/O}\lazynote{MMIO}{Memory-Mapped I/O: devices take up some addresses, and reading or writing those addresses works the device.}. For example, on the RISC-V virt board emulated by QEMU, the data register of the serial port is at address \texttt{0x10000000}. Write a byte there and a character appears on the screen:
 \begin{minted}[linenos=false]{c}
 volatile unsigned char *uart = (volatile unsigned char *)0x10000000;
 
@@ -689,7 +689,7 @@ volatile unsigned char *uart = (volatile unsigned char *)0x10000000;
 
 \texttt{unsigned char} is a type one byte in size, and \texttt{'H'} is the code of the character H. \texttt{volatile} tells the compiler: really do every single read and write, honestly, and don't optimize any of them away (as Chapter~\ref{chap:hello} showed, compilers love to make their own decisions).
 
-This code cannot run directly on Linux---all you would get is a segmentation fault. But on a machine without an operating system, this is the whole secret of ``printing''. \texttt{printf} goes the long way round, through the C standard library, a system call and the operating system's driver, and in the end it does exactly this. When our CPU is finished, the first words it says will be written just like this.
+This code cannot run directly on Linux---all you would get is a segmentation fault. But on a machine without an operating system, this is the whole secret of ``printing''. \texttt{printf} goes the long way round, through the C standard library, a system call and the operating system's driver, and in the end it does exactly this. The first words a newly built CPU ever says are usually written just like this.
 
 \section{Summary}
 

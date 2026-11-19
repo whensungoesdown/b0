@@ -226,7 +226,7 @@ root  run   sbin  srv  sys  tmp  usr  var
 
 这本书从头到尾都用 \texttt{gcc} 编译程序，连 Windows 的程序也是用 MinGW 版的 gcc 编译的（第~\ref{sec:win32}~节）。为什么不用微软自己的编译器？
 
-最简单的原因：\textbf{它是免费的}，而且是自由软件\lazynote{自由软件}{可以自由使用、研究、修改和分发的软件，源代码是公开的。}，谁都可以下载、使用、甚至修改它的源代码。GCC 是 GNU 项目在 1987 年推出的，最早叫“GNU C Compiler”，后来支持的语言越来越多，就改叫“GNU Compiler Collection”。今天，它能为几十种 CPU 生成代码：x86、ARM、RISC-V……等我们以后自己造出 CPU，用来给它编译程序的，也会是 gcc。
+最简单的原因：\textbf{它是免费的}，而且是自由软件\lazynote{自由软件}{可以自由使用、研究、修改和分发的软件，源代码是公开的。}，谁都可以下载、使用、甚至修改它的源代码。GCC 是 GNU 项目在 1987 年推出的，最早叫“GNU C Compiler”，后来支持的语言越来越多，就改叫“GNU Compiler Collection”。今天，它能为几十种 CPU 生成代码：x86、ARM、RISC-V……哪天你自己造出一颗 RISC-V 的 CPU，给它编译程序用的，多半也还是 gcc。
 
 当然，好用的编译器不止这一个。微软的 Visual Studio（用的是 MSVC 编译器）有免费的社区版，在 Windows 上写图形界面的程序很方便；苹果的 Xcode 和 Linux 上也很流行的 Clang，同样是免费的。学 C 语言，用哪个都行。本书选 gcc，是因为它在 Linux、Windows（通过 WSL 或 MinGW）上都能用，命令也都一样。
 
