@@ -62,6 +62,13 @@
 
 % 节标题的编号：红底白字的方块
 \newcommand\lazysecnum[1]{\colorbox{lazyred}{\makebox[2.4em]{\color{white}#1}}}
+
+% 不编号、但要进目录的节（各章末尾的“练习”）：\lazysectionstar{标题}
+% 进总目录和章首页的小目录，页眉也换成它；\phantomsection 让目录里的链接跳到标题这一行
+\newcommand\lazysectionstar[1]{%
+  \section*{\phantomsection #1}%
+  \addcontentsline{toc}{section}{#1}%
+  \markright{#1}}
 \newcommand\lazygobble[1]{}
 
 % 章标题：有编号的章（正文各章、附录）用整页的章首页；

@@ -170,7 +170,7 @@ do {
 \section{模式二：\texorpdfstring{\NoCaseChange{goto}}{goto} 统一出口}
 \label{sec:goto}
 
-1968 年，Dijkstra 发表了著名的短文《Go To Statement Considered Harmful》\cite{dijkstra1968}，此后 \texttt{goto} 在很多教材里成了禁忌。Dijkstra 反对的是用 \texttt{goto} 在程序中随意跳转，使控制流难以追踪。只向前跳到函数末尾清理代码的 \texttt{goto} 不会造成这个问题，反而比前面几种写法更清楚。Linux 内核的编码规范专门有一节，推荐用 \texttt{goto} 集中处理函数的退出\cite{linux-coding-style}。
+1968 年，Dijkstra 发表了著名的短文《Go To Statement Considered Harmful》\footnote{Edsger W. Dijkstra, Go To Statement Considered Harmful, \emph{Communications of the ACM}, 11(3):147--148, 1968.}，此后 \texttt{goto} 在很多教材里成了禁忌。Dijkstra 反对的是用 \texttt{goto} 在程序中随意跳转，使控制流难以追踪。只向前跳到函数末尾清理代码的 \texttt{goto} 不会造成这个问题，反而比前面几种写法更清楚。Linux 内核的编码规范专门有一节，推荐用 \texttt{goto} 集中处理函数的退出\footnote{\emph{Linux Kernel Coding Style}，\url{https://www.kernel.org/doc/html/latest/process/coding-style.html}。}。
 
 \subsection{单一出口标签}
 
@@ -186,7 +186,7 @@ do {
 
 清理代码中，\texttt{free(buf)} 不需要判断 \texttt{buf} 是否为空，因为 C 标准规定 \texttt{free(NULL)} 什么也不做；\texttt{fclose} 没有这个保证，所以要先判断 \texttt{fp}。
 
-这种写法要求所有资源变量在第一个 \texttt{goto} 之前就已经初始化为空值，否则清理代码会去释放一个还没拿到的资源。Linux 内核的编码规范把这类错误称为“one err bug”\cite{linux-coding-style}。
+这种写法要求所有资源变量在第一个 \texttt{goto} 之前就已经初始化为空值，否则清理代码会去释放一个还没拿到的资源。Linux 内核的编码规范把这类错误称为“one err bug”。
 
 \subsection{分层标签}
 
@@ -198,7 +198,7 @@ Linux 内核中更常见的是代码~\ref{lst:ladder} 这样的写法：每个�
 
 这种写法的优点是清理代码不需要判断变量是否为空，每个标签只做一件事；增加资源时，只需在释放它的位置加一个标签。缺点是成功路径要在标签之前自己释放不再需要的资源（这里是 \texttt{fclose}）并返回，所以函数有两个 \texttt{return}；如果跳错了标签，就会泄漏或重复释放资源。
 
-Linux 内核的编码规范建议标签名说明它做什么，比如 \texttt{err\_free}，而不是 \texttt{err1}、\texttt{err2}\cite{linux-coding-style}。这样增删步骤时不用给标签重新编号，检查每个 \texttt{goto} 是否跳对了也更容易。
+Linux 内核的编码规范建议标签名说明它做什么，比如 \texttt{err\_free}，而不是 \texttt{err1}、\texttt{err2}。这样增删步骤时不用给标签重新编号，检查每个 \texttt{goto} 是否跳对了也更容易。
 
 \subsection{使用 goto 的规则}
 
@@ -264,7 +264,7 @@ int uart_set_baud(struct uart *u, unsigned int baud)
   \item \textbf{交出所有权后置空。}把资源交给调用者或其他模块之后，立即把本地变量置为空值，清理代码就不会释放它（代码~\ref{lst:nt} 和代码~\ref{lst:goto-single}）。
   \item \textbf{及时保存错误码。}\texttt{errno} 会被后面的库函数调用改写，Windows 的 \texttt{GetLastError()} 也一样。出错后要立即把它保存到自己的变量里。
   \item \textbf{输出参数先置空。}函数开头把输出参数设为空值，调用者在失败时就不会拿到一个无效的指针。
-  \item \textbf{不要用宏隐藏跳转。}\texttt{\#define CHECK(x) if (!(x)) goto out} 看起来能省几行，但读代码时看不到跳转，和 \texttt{if}/\texttt{else} 搭配时也容易出错。Linux 内核的编码规范也明确反对影响控制流的宏\cite{linux-coding-style}。
+  \item \textbf{不要用宏隐藏跳转。}\texttt{\#define CHECK(x) if (!(x)) goto out} 看起来能省几行，但读代码时看不到跳转，和 \texttt{if}/\texttt{else} 搭配时也容易出错。Linux 内核的编码规范也明确反对影响控制流的宏。
 \end{itemize}
 
 \section{编译器和其他语言的支持}
@@ -282,7 +282,7 @@ GCC 和 Clang 提供了 \texttt{\_\_attribute\_\_((cleanup(func)))}：变量离�
   \item 配套的习惯包括：资源变量初始化为空值、交出所有权后置空、及时保存错误码、不用宏隐藏跳转。
 \end{itemize}
 
-\section*{练习}
+\lazysectionstar{练习}
 
 \begin{enumerate}
   \item 把代码~\ref{lst:nested} 改写成 \texttt{do \{ \} while (0)} 的写法，保存为 \texttt{code/ch03/do\_while.c}，把它加入 \texttt{Makefile} 中的 \texttt{VARIANTS}，然后运行 \texttt{make test} 验证。

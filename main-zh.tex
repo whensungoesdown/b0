@@ -23,7 +23,9 @@
 \thispagestyle{empty}\null\clearpage   % 封面的背面：空白页，不印页码
 \input{frontmatter/dedication}         % 献词（中英文两版共用）
 \input{frontmatter/zh/preface}
+\cleardoublepage\pdfbookmark[0]{\contentsname}{toc}   % 目录本身不列进目录，只加一个 PDF 书签
 \tableofcontents
+\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listlistingname}
 \listoflistings
 
 \mainmatter
@@ -38,8 +40,5 @@
 \input{backmatter/zh/appendix}
 \input{backmatter/zh/appendix_b}
 \input{backmatter/zh/appendix_c}
-
-\backmatter
-\printbibliography[heading=bibintoc, title={参考文献}]
 
 \end{document}

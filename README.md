@@ -26,7 +26,6 @@ chapters/en/          英文版正文，文件名和中文版一一对应
 backmatter/zh/、en/   附录
 figures/              图片
 code/                 书中引用的源代码，按章分目录；各目录中运行 make 可以编译和测试
-refs.bib              参考文献（GB/T 7714-2015 格式输出）
 .latexmkrc            latexmk 设置：XeLaTeX，-shell-escape，输出到 build/
 tools/latexminted     minted 辅助程序的修复版（见下面的“代码高亮”）
 tools/translation-status.sh  检查英文版是否跟上了中文版（见下面的“中英文两个版本”）

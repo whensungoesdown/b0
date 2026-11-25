@@ -22,7 +22,9 @@
 \thispagestyle{empty}\null\clearpage
 \input{frontmatter/dedication}
 \input{frontmatter/en/preface}
+\cleardoublepage\pdfbookmark[0]{\contentsname}{toc}
 \tableofcontents
+\cleardoublepage\phantomsection\addcontentsline{toc}{chapter}{\listlistingname}
 \listoflistings
 
 \mainmatter
@@ -37,8 +39,5 @@
 \input{backmatter/en/appendix}
 \input{backmatter/en/appendix_b}
 \input{backmatter/en/appendix_c}
-
-\backmatter
-\printbibliography[heading=bibintoc, title={Bibliography}]
 
 \end{document}

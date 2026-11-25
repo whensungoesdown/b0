@@ -171,7 +171,7 @@ On Windows, Microsoft's structured exception handling (SEH) can build the same s
 \section{Pattern 2: A Single Exit with \texorpdfstring{\NoCaseChange{goto}}{goto}}
 \label{sec:goto}
 
-In 1968 Dijkstra published his famous short letter ``Go To Statement Considered Harmful''~\cite{dijkstra1968}, and ever since, \texttt{goto} has been a forbidden word in many textbooks. What Dijkstra objected to was using \texttt{goto} to jump around a program at will, making the flow of control hard to follow. A \texttt{goto} that only jumps forwards to the cleanup code at the end of the function does not cause that problem; in fact it is clearer than the styles we have seen so far. The Linux kernel coding style even has a whole section recommending \texttt{goto} for the centralized exit of functions~\cite{linux-coding-style}.
+In 1968 Dijkstra published his famous short letter ``Go To Statement Considered Harmful''\footnote{Edsger W. Dijkstra, ``Go To Statement Considered Harmful'', \emph{Communications of the ACM}, 11(3):147--148, 1968.}, and ever since, \texttt{goto} has been a forbidden word in many textbooks. What Dijkstra objected to was using \texttt{goto} to jump around a program at will, making the flow of control hard to follow. A \texttt{goto} that only jumps forwards to the cleanup code at the end of the function does not cause that problem; in fact it is clearer than the styles we have seen so far. The Linux kernel coding style even has a whole section recommending \texttt{goto} for the centralized exit of functions\footnote{\emph{Linux Kernel Coding Style}, \url{https://www.kernel.org/doc/html/latest/process/coding-style.html}.}.
 
 \subsection{A Single Exit Label}
 
@@ -187,7 +187,7 @@ Its structure is almost the same as \texttt{do \{ \} while (FALSE)}: \texttt{bre
 
 In the cleanup code, \texttt{free(buf)} does not need to check whether \texttt{buf} is empty, because the C standard says that \texttt{free(NULL)} does nothing. \texttt{fclose} makes no such promise, so \texttt{fp} has to be checked first.
 
-This style requires every resource variable to be set to its empty value before the first \texttt{goto}; otherwise the cleanup code would try to free a resource it never got. The Linux kernel coding style calls this kind of mistake a ``one err bug''~\cite{linux-coding-style}.
+This style requires every resource variable to be set to its empty value before the first \texttt{goto}; otherwise the cleanup code would try to free a resource it never got. The Linux kernel coding style calls this kind of mistake a ``one err bug''.
 
 \subsection{A Ladder of Labels}
 
@@ -199,7 +199,7 @@ Read it like this: when a step fails, jump to the label that frees ``the resourc
 
 The advantage of this style is that the cleanup code never has to check whether a variable is empty, and each label does just one thing. To add a resource, you only add a label at the place where it is freed. The downside is that the success path has to free the resources it no longer needs (here, \texttt{fclose}) and return before the labels, so the function has two \texttt{return}s. And if you jump to the wrong label, you leak a resource or free it twice.
 
-The Linux kernel coding style suggests that a label's name should say what it does, like \texttt{err\_free}, rather than \texttt{err1} or \texttt{err2}~\cite{linux-coding-style}. That way you don't have to renumber the labels when you add or remove a step, and it is easier to check that every \texttt{goto} jumps to the right place.
+The Linux kernel coding style suggests that a label's name should say what it does, like \texttt{err\_free}, rather than \texttt{err1} or \texttt{err2}. That way you don't have to renumber the labels when you add or remove a step, and it is easier to check that every \texttt{goto} jumps to the right place.
 
 \subsection{Rules for Using goto}
 
@@ -265,7 +265,7 @@ Which one to choose depends first of all on the rules your project already has. 
   \item \textbf{Set it to empty after giving it away.} As soon as you hand a resource to the caller or to another module, set the local variable to its empty value, so the cleanup code won't free it (Listings~\ref{lst:nt} and~\ref{lst:goto-single}).
   \item \textbf{Save error codes right away.} \texttt{errno} is overwritten by later library calls, and so is Windows' \texttt{GetLastError()}. After an error, save it in your own variable immediately.
   \item \textbf{Clear output parameters first.} Set the output parameters to empty values at the start of the function, so that on failure the caller never gets an invalid pointer.
-  \item \textbf{Don't hide jumps in macros.} \texttt{\#define CHECK(x) if (!(x)) goto out} looks like it saves a few lines, but when you read the code you can't see the jump, and it easily goes wrong when combined with \texttt{if}/\texttt{else}. The Linux kernel coding style also clearly rejects macros that affect control flow~\cite{linux-coding-style}.
+  \item \textbf{Don't hide jumps in macros.} \texttt{\#define CHECK(x) if (!(x)) goto out} looks like it saves a few lines, but when you read the code you can't see the jump, and it easily goes wrong when combined with \texttt{if}/\texttt{else}. The Linux kernel coding style also clearly rejects macros that affect control flow.
 \end{itemize}
 
 \section{Help from Compilers and Other Languages}
@@ -283,7 +283,7 @@ Still, in boot code, firmware and most drivers, what we write is plain standard 
   \item The habits that go with them: initialize resource variables to empty, set them to empty after giving them away, save error codes right away, and don't hide jumps in macros.
 \end{itemize}
 
-\section*{Exercises}
+\lazysectionstar{Exercises}
 
 \begin{enumerate}
   \item Rewrite Listing~\ref{lst:nested} in the \texttt{do \{ \} while (0)} style, save it as \texttt{code/en/ch03/do\_while.c}, add it to \texttt{VARIANTS} in the \texttt{Makefile}, and run \texttt{make test} to check it.
