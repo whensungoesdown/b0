@@ -34,6 +34,13 @@
 % 封面上不印中文书名（frontmatter/cover.tex 里用 \providecommand 定义，这里先定义为空）
 \newcommand\CoverZhTitle{}
 
+% 封底（backmatter/backcover.tex）的文字
+\newcommand\BackCoverAuthorTitle{About the Author}
+\newcommand\BackCoverAuthor{%
+  whensungoesdown went from C to rootkits, has two Phrack articles, built a CPU
+  that runs Linux, and is still chasing that little white rabbit.
+  Ray (dog) and Summer (cat) were asked to review this book. They did not read it.}
+
 % 每章章首页的引言：\lazyquote{章号}{}{原文}{出处}，第二项（中文）留空
 \lazyquote{1}{}{The only way to learn a new programming language is by writing programs in it.}
              {Brian W. Kernighan and Dennis M. Ritchie,\\\emph{The C Programming Language}, 1978}

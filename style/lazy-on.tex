@@ -3,6 +3,13 @@
 % 页眉的红线也一直画到页边注那一栏（5 mm 间隔 + 45 mm 宽 = 50 mm）。
 \fancyhfoffset[LE,RO]{50mm}
 \pagestyle{lazy}
+
+% 每章从右页开始时，前面补的空白页什么都不印（不要页眉、页码、页脚）
+\makeatletter
+\renewcommand\cleardoublepage{%
+  \clearpage
+  \if@twoside\ifodd\c@page\else\hbox{}\thispagestyle{empty}\newpage\fi\fi}
+\makeatother
 \ctexset{
   chapter = {
     pagestyle   = lazyopener,
